@@ -1,11 +1,48 @@
 {
   "name": "xmtp-agent-alphie",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "exports": "./dist/index.js",
+  "type": "module",
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=20"
   },
+  "scripts": {
+    "start": "node ./dist/index.js",
+    "dev": "pnpm build && pnpm start",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "check": "biome check --write .",
+    "format": "npx @biomejs/biome format --write ./src",
+    "gen:keys": "pnpm build && node ./dist/utils/generate-keys.js"
+  },
+  "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "@t3-oss/env-core": "^0.13.8",
+    "@xmtp/agent-sdk": "^1.0.1",
+    "@xmtp/content-type-primitives": "^2.0.2",
+    "@xmtp/content-type-reply": "^2.0.2",
+    "@xmtp/content-type-wallet-send-calls": "^2.0.0",
+    "dotenv": "^17.2.2",
+    "drizzle-orm": "^0.44.5",
+    "uint8arrays": "^5.1.0",
+    "ulid": "^3.0.1",
+    "viem": "^2.37.8",
+    "zod": "^4.1.11",
+    "zod-validation-error": "^4.0.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
+    "@types/node": "^24.5.2",
+    "drizzle-kit": "^0.31.4",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "ultracite": "^5.4.5"
+  }
 }
