@@ -1,5 +1,5 @@
 import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
-import { createPublicClient, formatUnits, http, toHex, erc20Abi } from "viem";
+import { createPublicClient, erc20Abi, formatUnits, http, toHex } from "viem";
 import { base, baseSepolia } from "viem/chains";
 
 // Network configuration type
@@ -93,7 +93,7 @@ export class USDCHandler {
 					data: transactionData as `0x${string}`,
 					metadata: {
 						description: `Transfer ${
-							amount / Math.pow(10, this.networkConfig.decimals)
+							amount / 10 ** this.networkConfig.decimals
 						} USDC on ${this.networkConfig.networkName}`,
 						transactionType: "transfer",
 						currency: "USDC",

@@ -1,25 +1,45 @@
-import { Agent } from "@xmtp/agent-sdk";
+import { Agent, filter } from "@xmtp/agent-sdk";
 import { logDetails } from "@xmtp/agent-sdk/debug";
-import {
-	WalletSendCallsCodec,
-	ContentTypeWalletSendCalls,
-} from "@xmtp/content-type-wallet-send-calls";
+import { GroupUpdatedCodec } from "@xmtp/content-type-group-updated";
+import { ReactionCodec } from "@xmtp/content-type-reaction";
+import { RemoteAttachmentCodec } from "@xmtp/content-type-remote-attachment";
 import { ReplyCodec } from "@xmtp/content-type-reply";
 import {
-	inlineActionsMiddleware,
-	firstTimeInteractionMiddleware,
-} from "./middlewares.js";
-import {
-	USDCHandler,
-	registerAction,
-	ActionBuilder,
-	sendActions,
-	getEncryptionKeyFromString,
-} from "./utils/index.js";
-import { ActionsCodec, IntentCodec } from "./types/index.js";
+	ContentTypeWalletSendCalls,
+	WalletSendCallsCodec,
+} from "@xmtp/content-type-wallet-send-calls";
 import { base } from "viem/chains";
+import { aiGenerateAnswer } from "./lib/ai-sdk.js";
+import {
+	DM_RESPONSE_MESSAGE,
+	HELP_HINT_MESSAGE,
+	WELCOME_MESSAGE,
+} from "./lib/constants.js";
+import { getOrCreateGroupByConversationId } from "./lib/db/queries/group.query.js";
 import { env } from "./lib/env.js";
-import { GroupUpdatedMessage } from "./types/xmtp.types.js";
+import {
+	// firstTimeInteractionMiddleware,
+	inlineActionsMiddleware,
+	// thinkingReactionMiddleware,
+} from "./middlewares.js";
+import { ActionsCodec, IntentCodec } from "./types/index.js";
+import type {
+	GroupUpdatedMessage,
+	ThinkingReactionContext,
+} from "./types/xmtp.types.js";
+import {
+	ActionBuilder,
+	getEncryptionKeyFromString,
+	registerAction,
+	sendActions,
+	USDCHandler,
+} from "./utils/index.js";
+import {
+	extractMessageContent,
+	handleGroupUpdated,
+	shouldRespondToMessage,
+	shouldSendHelpHint,
+} from "./utils/message.util.js";
 
 async function main() {
 	// Initialize USDC handler
@@ -42,9 +62,12 @@ async function main() {
 			)}.db3`,
 		codecs: [
 			new ReplyCodec(),
+			new GroupUpdatedCodec(),
 			new WalletSendCallsCodec(),
 			new ActionsCodec(),
 			new IntentCodec(),
+			new ReactionCodec(),
+			new RemoteAttachmentCodec(),
 		],
 	});
 
@@ -57,14 +80,12 @@ async function main() {
 	function createUSDCTransfer(
 		fromAddress: string,
 		amount: number,
-		withMetadata: boolean = false,
+		withMetadata = false,
 	) {
 		if (!agentAddress) {
 			throw new Error("Unable to get agent address");
 		}
-		const amountInDecimals = Math.floor(
-			amount * Math.pow(10, networkConfig.decimals),
-		);
+		const amountInDecimals = Math.floor(amount * 10 ** networkConfig.decimals);
 		const calls = usdcHandler.createUSDCTransferCalls(
 			fromAddress,
 			agentAddress,
@@ -90,170 +111,202 @@ async function main() {
 	}
 
 	// Register action handlers focused on inline actions UX
-	registerAction("send-small", async (ctx) => {
+	registerAction("copy-trade", async (ctx) => {
 		const senderAddress = await ctx.getSenderAddress();
 		if (!senderAddress) return;
 
 		const transfer = createUSDCTransfer(senderAddress, 0.005);
 		await ctx.conversation.send(transfer, ContentTypeWalletSendCalls);
-		await ctx.sendText(
-			"💸 Please approve the 0.005 USDC transfer in your wallet!",
-		);
+		await ctx.sendText("💸 Please copy the trade in your wallet!");
 	});
 
-	registerAction("send-large", async (ctx) => {
+	registerAction("open-app", async (ctx) => {
 		const senderAddress = await ctx.getSenderAddress();
 		if (!senderAddress) return;
 
-		const transfer = createUSDCTransfer(senderAddress, 1);
-		await ctx.conversation.send(transfer, ContentTypeWalletSendCalls);
-		await ctx.sendText("💸 Please approve the 1 USDC transfer in your wallet!");
+		await ctx.sendText("💸  app in your wallet! https://app.tba.chat");
 	});
 
-	registerAction("check-balance", async (ctx) => {
-		const balance = await usdcHandler.getUSDCBalance(agentAddress);
-		await ctx.sendText(
-			`💰 Bot Balance: ${balance} USDC on ${networkConfig.networkName}`,
-		);
-	});
-
-	registerAction("send-with-metadata", async (ctx) => {
+	registerAction("balance", async (ctx) => {
 		const senderAddress = await ctx.getSenderAddress();
 		if (!senderAddress) return;
+		const balance = await usdcHandler.getUSDCBalance(senderAddress);
 
-		const transfer = createUSDCTransfer(senderAddress, 0.005, true);
-		await ctx.conversation.send(transfer, ContentTypeWalletSendCalls);
 		await ctx.sendText(
-			"😉 Please approve the 0.005 USDC transfer with rich metadata!",
+			`💰 Your Balance: ${balance} USDC on ${networkConfig.networkName}`,
 		);
 	});
 
-	registerAction("transaction-actions", async (ctx) => {
-		const actions = ActionBuilder.create(
-			"transaction-actions",
-			"Choose a transaction action:",
-		)
-			.add("send-small", "Send 0.005 USDC")
-			.add("send-large", "Send 1 USDC")
-			.add("send-with-metadata", "Send with Metadata")
-			.add("check-balance", "Check Balance")
-			.build();
+	// 	registerAction("send-with-metadata", async (ctx) => {
+	// 		const senderAddress = await ctx.getSenderAddress();
+	// 		if (!senderAddress) return;
 
-		await sendActions(ctx, actions);
-	});
+	// 		const transfer = createUSDCTransfer(senderAddress, 0.005, true);
+	// 		await ctx.conversation.send(transfer, ContentTypeWalletSendCalls);
+	// 		await ctx.sendText(
+	// 			"😉 Please approve the 0.005 USDC transfer with rich metadata!",
+	// 		);
+	// 	});
 
-	registerAction("more-info", async (ctx) => {
-		const infoMessage = `ℹ️ Network Information
+	// 	registerAction("transaction-actions", async (ctx) => {
+	// 		const actions = ActionBuilder.create(
+	// 			"transaction-actions",
+	// 			"Choose a transaction action:",
+	// 		)
+	// 			.add("send-small", "Send 0.005 USDC")
+	// 			.add("send-large", "Send 1 USDC")
+	// 			.add("send-with-metadata", "Send with Metadata")
+	// 			.add("check-balance", "Check Balance")
+	// 			.build();
 
-CURRENT NETWORK:
-• Name: ${networkConfig.networkName}
-• Chain ID: ${networkConfig.chainId}
-• USDC Address: ${networkConfig.tokenAddress}
+	// 		await sendActions(ctx, actions);
+	// 	});
 
-FEATURES:
-• Wallet Send Calls (EIP-5792)
-• Inline Actions (XIP-67)
+	// 	registerAction("more-info", async (ctx) => {
+	// 		const infoMessage = `🌐 Network Information
 
-🔗 Test at: https://xmtp.chat`;
+	// CURRENT NETWORK:
+	// • Name: ${networkConfig.networkName}
+	// • Chain ID: ${networkConfig.chainId}
+	// • USDC Address: ${networkConfig.tokenAddress}
 
-		await ctx.sendText(infoMessage);
-	});
+	// FEATURES:
+	// • Wallet Send Calls (EIP-5792)
+	// • Inline Actions (XIP-67)
+
+	// 🔗 Test at: https://xmtp.chat`;
+
+	// 		await ctx.sendText(infoMessage);
+	// 	});
 
 	// Agent middlewares
-	agent.use(firstTimeInteractionMiddleware, inlineActionsMiddleware);
-
-	// Handle text messages with simple commands
-	agent.on("text", async (ctx) => {
-		if (!ctx.message.content.startsWith("/")) return;
-
-		if (ctx.isDm()) {
-			const welcomeActions = ActionBuilder.create(
-				`welcome-${Date.now()}`,
-				`👋 Welcome! I'm your ETH price agent.\n\nI can help you stay updated with the latest Ethereum price information. Choose an option below to get started:`,
-			)
-				.add("get-current-price", "💰 Get Current ETH Price")
-				.add("get-price-chart", "📊 Get Price with 24h Change")
-				.build();
-
-			console.log(`✓ Sending welcome message with actions`);
-			await sendActions(ctx, welcomeActions);
-		}
-
-		const actions = ActionBuilder.create(
-			"help",
-			`👋 Welcome to Alphie XMTP Agent!
-
-I can help you with USDC transactions on ${networkConfig.networkName}.
-
-Choose an action below:`,
-		)
-			.add("transaction-actions", "💸 Transaction Actions")
-			.add("send-with-metadata", "😉 Send with Metadata")
-			.add("check-balance", "Check Balance")
-			.add("more-info", "ℹ️ More Info")
-			.build();
-
-		await sendActions(ctx, actions);
-	});
-
-	agent.on("reply", async (ctx) => {
-		console.log("↩️ Reply received:", ctx.message.content);
-	});
-
-	agent.on("reaction", async (ctx) => {
-		console.log("👍 Reaction received:", ctx.message.content);
-	});
+	agent.use(
+		// firstTimeInteractionMiddleware,
+		inlineActionsMiddleware,
+		// thinkingReactionMiddleware,
+	);
 
 	agent.on("message", async (ctx) => {
+		const thinkingCtx = ctx as ThinkingReactionContext;
 		console.log(`💬 Message received: ${JSON.stringify(ctx.message.content)}`);
 
-		if (ctx.message.contentType?.typeId === "reply") {
-			console.log("↩️ Reply already handled:");
-			return;
-		}
-
-		if (ctx.message.contentType?.typeId === "reaction") {
-			console.log("👍 Reaction not supported:");
-			return;
-		}
-
-		// Check if message is a group update
-		if (ctx.message.contentType?.typeId === "group_updated") {
-			const msg = ctx.message as GroupUpdatedMessage;
-
-			// track member additions
-			if (msg.content.addedInboxes?.length ?? 0 > 0) {
-				console.log("New members added:", msg.content.addedInboxes);
+		try {
+			// skip if message has no content or is from self or is reaction
+			if (
+				!filter.hasContent(ctx.message) ||
+				filter.fromSelf(ctx.message, ctx.client) ||
+				ctx.message.contentType?.typeId === "reaction"
+			) {
+				console.log("Skipping message");
+				return;
 			}
 
-			// track member removals
-			if (msg.content.removedInboxes?.length ?? 0 > 0) {
-				console.log("Members removed:", msg.content.removedInboxes);
+			// Auto-respond to DM messages
+			if (ctx.isDm()) {
+				console.log("✓ Handling DM message");
+				await ctx.sendText(DM_RESPONSE_MESSAGE);
+				if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
+					await thinkingCtx.thinkingReaction.removeThinkingEmoji();
+				}
+				return;
 			}
 
-			// track metadata changes
-			const hasChangedName = msg.content.metadataFieldChanges?.find(
-				(c) => c.fieldName === "group_name",
-			);
-			const hasChangedDescription = msg.content.metadataFieldChanges?.find(
-				(c) => c.fieldName === "group_description",
-			);
-			const hasChangedImageUrl = msg.content.metadataFieldChanges?.find(
-				(c) => c.fieldName === "group_image_url_square",
-			);
-			if (hasChangedName || hasChangedDescription || hasChangedImageUrl) {
-				console.log(
-					"Group metadata changed:",
-					msg.content.metadataFieldChanges,
+			// Handle group messages
+			if (ctx.isGroup()) {
+				console.log("Handling group message");
+				const conversationId = ctx.conversation.id;
+				const { group, isNew } = await getOrCreateGroupByConversationId(
+					conversationId,
+					ctx.conversation,
 				);
+				console.log("Group:", group, isNew);
+
+				// Send welcome message to new group if it is new
+				if (isNew) {
+					console.log("Sending welcome message to new group");
+					await ctx.sendText(WELCOME_MESSAGE);
+					console.log("✓ Sent welcome message to new group");
+				}
+
+				// Check if message is a group update
+				if (ctx.message.contentType?.typeId === "group_updated" && !isNew) {
+					console.log(
+						"🥶 Group updated message received",
+						JSON.stringify(ctx.message),
+					);
+					const msg = ctx.message as GroupUpdatedMessage;
+					handleGroupUpdated(msg);
+					return;
+				}
+
+				// Handle reply to the agent
+				const messageContent = extractMessageContent(ctx.message);
+				const isSendHelpHint = shouldSendHelpHint(messageContent);
+				const shouldRespond = await shouldRespondToMessage({
+					message: ctx.message,
+					agentInboxId: ctx.client.inboxId,
+					client: ctx.client,
+				});
+				console.log("Should respond:", shouldRespond);
+				if (shouldRespond) {
+					if (isSendHelpHint) {
+						await ctx.sendText(HELP_HINT_MESSAGE);
+						const actions = ActionBuilder.create(
+							"help",
+							`👋 Welcome to Alphie XMTP Agent!
+
+		I can help you tracking trades of the group members.
+
+		Choose an action below:`,
+						)
+							.add("copy-trade", "💸 Copy Trade")
+							.add("balance", "💰 Your Balance")
+							.add("open-app", "😉 Open App")
+							.build();
+
+						await sendActions(ctx, actions);
+						if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
+							await thinkingCtx.thinkingReaction.removeThinkingEmoji();
+						}
+						return;
+					}
+
+					// TODO get conversation history
+					const answer = await aiGenerateAnswer({
+						message: messageContent,
+						messages: [],
+					});
+					await ctx.sendText(answer);
+				}
+
+				// TODO: Handle reply for the group
+				if (ctx.message.contentType?.typeId === "reply") {
+					console.log("↩️ Handling reply");
+					await ctx.sendText("Handling reply");
+					if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
+						await thinkingCtx.thinkingReaction.removeThinkingEmoji();
+					}
+					return;
+				}
+			}
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			console.error("❌ Error processing message:", errorMessage);
+			if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
+				try {
+					await thinkingCtx.thinkingReaction.removeThinkingEmoji();
+				} catch (removeError) {
+					console.error("Error removing thinking emoji:", removeError);
+				}
 			}
 		}
 	});
 
 	// Handle startup
 	agent.on("start", () => {
-		console.log(`🦊 Alphie XMTP Agent is running...`);
-		console.log(`Send /help or gm to get started!`);
+		console.log("🦊 Alphie XMTP Agent is running...");
+		console.log("Send /help or gm to get started!");
 		logDetails(agent.client);
 	});
 

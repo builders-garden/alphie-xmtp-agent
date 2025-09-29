@@ -18,6 +18,12 @@ const envSchema = z.object({
 	// Database
 	DATABASE_URL: z.string().min(1),
 	DATABASE_AUTH_TOKEN: z.string().min(1),
+
+	// Neynar
+	NEYNAR_API_KEY: z.string().min(1),
+
+	// OpenAI
+	OPENAI_API_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,7 +1,7 @@
 import { getRandomValues } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { toString } from "uint8arrays";
+import { toString as uint8arraysToString } from "uint8arrays";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 /**
@@ -12,7 +12,7 @@ export const generateEncryptionKeyHex = () => {
 	/* Generate a random encryption key */
 	const uint8Array = getRandomValues(new Uint8Array(32));
 	/* Convert the encryption key to a hex string */
-	return toString(uint8Array, "hex");
+	return uint8arraysToString(uint8Array, "hex");
 };
 
 /**

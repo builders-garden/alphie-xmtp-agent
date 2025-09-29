@@ -1,8 +1,8 @@
 import type { MessageContext } from "@xmtp/agent-sdk";
 import {
-	ContentTypeActions,
 	type Action,
 	type ActionsContent,
+	ContentTypeActions,
 } from "../types/actions-content.js";
 
 // Core types
@@ -275,7 +275,7 @@ export function initializeAppFromConfig(
 
 	// Log configuration options
 	if (config.options) {
-		console.log(`📋 App options:`, config.options);
+		console.log("📋 App options:", config.options);
 	}
 
 	// Register all handlers from menu actions

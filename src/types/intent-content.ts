@@ -1,6 +1,6 @@
 import {
-	ContentTypeId,
 	type ContentCodec,
+	ContentTypeId,
 	type EncodedContent,
 } from "@xmtp/content-type-primitives";
 

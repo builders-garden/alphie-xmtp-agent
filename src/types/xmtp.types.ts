@@ -1,3 +1,5 @@
+import type { MessageContext } from "@xmtp/agent-sdk";
+
 export interface GroupUpdatedMessage {
 	conversationId: string;
 	contentType: { typeId: "group_updated" };
@@ -14,5 +16,12 @@ export interface GroupUpdatedMessage {
 			inboxId: string; // Members removed
 		}>;
 		initiatedByInboxId?: string; // Who triggered the update
+	};
+}
+
+// Extended context type to include thinking reaction helpers
+export interface ThinkingReactionContext extends MessageContext {
+	thinkingReaction?: {
+		removeThinkingEmoji: () => Promise<void>;
 	};
 }
