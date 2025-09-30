@@ -1,8 +1,35 @@
+import type { Address } from "viem";
+import { base, mainnet } from "viem/chains";
+
 // Storage directory constants
 export const STORAGE_CONFIG = {
 	XMTP_DIR: ".data/xmtp",
 	WALLET_DIR: ".data/wallet",
 } as const;
+
+// Network configuration type
+export type NetworkConfig = {
+	tokenAddress: Address;
+	chainId: number;
+	decimals: number;
+	networkName: string;
+};
+
+// Available network configurations
+export const USDC_NETWORKS: Record<number, NetworkConfig> = {
+	[mainnet.id]: {
+		tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum Mainnet
+		chainId: mainnet.id,
+		decimals: 6,
+		networkName: "Ethereum Mainnet",
+	},
+	[base.id]: {
+		tokenAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC on Base Mainnet
+		chainId: base.id,
+		decimals: 6,
+		networkName: "Base",
+	},
+};
 
 // Agent trigger keywords and commands
 export const AGENT_TRIGGERS = ["@alphie", "@alphie.base.eth"] as const;
@@ -22,12 +49,19 @@ This group now has its own leaderboard. Bragging rights are officially on the li
 
 Tag @alphie.base.eth anytime to start a match.
 
-Let the squabbling begin 
+Let the copy trading begin🐂
 `.trim();
 
 // Help hint message
 export const HELP_HINT_MESSAGE =
 	"👋 Hi, I'm Alphie! You asked for help! Try to invoke the agent with @alphie.base.eth or just @alphie\n";
+
+// Actions message
+export const ACTIONS_MESSAGE = `👋 Welcome to Alphie XMTP Agent!
+
+I can help you tracking trades of the group members.
+
+Choose an action below:`;
 
 // DM response message
 export const DM_RESPONSE_MESSAGE = `

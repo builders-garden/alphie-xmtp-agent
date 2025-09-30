@@ -1,6 +1,9 @@
 import { createOpenAI } from "@ai-sdk/openai";
+import type { MessageContext } from "@xmtp/agent-sdk";
 import { generateText, type ModelMessage, tool } from "ai";
 import { z } from "zod";
+import type { ActionsContent } from "../types/actions-content.js";
+import { sendActions } from "../utils/inline-actions.js";
 import { HELP_HINT_MESSAGE, SYSTEM_PROMPT } from "./constants.js";
 import { env } from "./env.js";
 
@@ -14,10 +17,35 @@ const tools = {
 	alphie_track: tool({
 		description: "Track a person's trade on the blockchain",
 		inputSchema: z.object({
-			address: z.string(),
+			farcasterFid: z
+				.string()
+				.optional()
+				.nullable()
+				.describe("The Farcaster FID of the person to track"),
+			address: z
+				.string()
+				.optional()
+				.nullable()
+				.describe("The Ethereum address of the person to track"),
+			ensName: z
+				.string()
+				.optional()
+				.nullable()
+				.describe("The Ethereum ENS name of the person to track"),
+			farcasterUsername: z
+				.string()
+				.optional()
+				.nullable()
+				.describe("The Farcaster username of the person to track"),
 		}),
-		execute: async ({ address }) => {
-			return `Tracked ${address}'s trade on the blockchain`;
+		execute: async ({ farcasterFid, address, ensName, farcasterUsername }) => {
+			const data = {
+				farcasterFid,
+				address,
+				ensName,
+				farcasterUsername,
+			};
+			return `Tracked ${JSON.stringify(data)}'s trade on the blockchain`;
 		},
 	}),
 	leaderboard: tool({
@@ -45,9 +73,13 @@ const tools = {
 export const aiGenerateAnswer = async ({
 	message,
 	messages,
+	xmtpContext,
+	xmtpActions,
 }: {
 	message: string;
 	messages: ModelMessage[];
+	xmtpContext: MessageContext;
+	xmtpActions: ActionsContent;
 }) => {
 	const response = await generateText({
 		model: openai("gpt-4.1-mini"),
@@ -60,9 +92,15 @@ export const aiGenerateAnswer = async ({
 		(part) => part.type === "tool-result",
 	);
 	if (outputStep) {
-		const outputText = outputStep.output as string;
+		const outputText = (outputStep.output as string) ?? response.text;
 		console.log("Output Text:", outputText);
-		return outputText ?? response.text;
+
+		const toolName = outputStep.toolName;
+		if (toolName === "help") {
+			await sendActions(xmtpContext, xmtpActions);
+			return outputText;
+		}
+		return outputText;
 	}
 
 	return response.text;

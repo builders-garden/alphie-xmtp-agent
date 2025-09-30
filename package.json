@@ -7,6 +7,14 @@
   "engines": {
     "node": ">=20"
   },
+  "pnpm": {
+    "overrides": {
+      "viem": "2.37.8"
+    }
+  },
+  "resolutions": {
+    "viem": "2.37.8"
+  },
   "scripts": {
     "start": "node ./dist/index.js",
     "dev": "tsx watch ./src/index.ts",
@@ -44,7 +52,7 @@
     "ky": "^1.11.0",
     "uint8arrays": "^5.1.0",
     "ulid": "^3.0.1",
-    "viem": "^2.37.8",
+    "viem": "^2.37.9",
     "zod": "^4.1.11",
     "zod-validation-error": "^4.0.2"
   },

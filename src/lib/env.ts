@@ -4,6 +4,8 @@ import { z } from "zod";
 dotenv.config();
 
 const envSchema = z.object({
+	APP_URL: z.url().min(1),
+
 	// XMTP Agent
 	XMTP_ENV: z
 		.enum(["dev", "local", "production"])
@@ -24,6 +26,9 @@ const envSchema = z.object({
 
 	// OpenAI
 	OPENAI_API_KEY: z.string().min(1),
+
+	// 0x api key
+	ZEROX_API_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

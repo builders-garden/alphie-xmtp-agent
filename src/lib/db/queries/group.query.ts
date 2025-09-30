@@ -74,6 +74,14 @@ export const upsertGroupMembers = async (
 	// Ensure all users exist for given inboxIds
 	const users = await Promise.all(
 		members.map(async (member) => {
+			console.log(
+				"member eth identifiers",
+				JSON.stringify(
+					member.accountIdentifiers.find(
+						(i) => i.identifierKind === IdentifierKind.Ethereum,
+					),
+				),
+			);
 			const address = member.accountIdentifiers.find(
 				(i) => i.identifierKind === IdentifierKind.Ethereum,
 			)?.identifier;
