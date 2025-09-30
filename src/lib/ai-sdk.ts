@@ -1,11 +1,18 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import type { MessageContext } from "@xmtp/agent-sdk";
-import { generateText, type ModelMessage, tool } from "ai";
+import type { User as NeynarUser } from "@neynar/nodejs-sdk/build/api/index.js";
+import type { DecodedMessage, MessageContext } from "@xmtp/agent-sdk";
+import { generateText, tool } from "ai";
 import { z } from "zod";
-import type { ActionsContent } from "../types/actions-content.js";
-import { sendActions } from "../utils/inline-actions.js";
+import { getXmtpActions } from "../actions.js";
+import { convertXmtpToAiModelMessages } from "../utils/index.js";
+import { sendActions, sendConfirmation } from "../utils/inline-actions.js";
 import { HELP_HINT_MESSAGE, SYSTEM_PROMPT } from "./constants.js";
+import {
+	addTrackedUserToGroup,
+	getOrCreateUserByFarcasterFid,
+} from "./db/queries/index.js";
 import { env } from "./env.js";
+import { fetchUserFromNeynarByFid, searchUserByUsername } from "./neynar.js";
 
 const openai = createOpenAI({
 	baseURL: "https://api.openai.com/v1",
@@ -17,46 +24,61 @@ const tools = {
 	alphie_track: tool({
 		description: "Track a person's trade on the blockchain",
 		inputSchema: z.object({
-			farcasterFid: z
-				.string()
-				.optional()
-				.nullable()
-				.describe("The Farcaster FID of the person to track"),
-			address: z
-				.string()
-				.optional()
-				.nullable()
-				.describe("The Ethereum address of the person to track"),
-			ensName: z
-				.string()
-				.optional()
-				.nullable()
-				.describe("The Ethereum ENS name of the person to track"),
 			farcasterUsername: z
 				.string()
 				.optional()
 				.nullable()
-				.describe("The Farcaster username of the person to track"),
+				.describe(
+					"The Farcaster username of the person to track, the username can also be an Ethereum ENS name",
+				),
+			farcasterFid: z
+				.number()
+				.optional()
+				.nullable()
+				.describe("The Farcaster FID of the person to track"),
 		}),
-		execute: async ({ farcasterFid, address, ensName, farcasterUsername }) => {
-			const data = {
-				farcasterFid,
-				address,
-				ensName,
-				farcasterUsername,
+		execute: async ({ farcasterFid, farcasterUsername }) => {
+			console.log("track this farcaster user", farcasterFid, farcasterUsername);
+			let user: NeynarUser | null = null;
+			if (farcasterFid) {
+				user = await fetchUserFromNeynarByFid(farcasterFid);
+			} else if (farcasterUsername) {
+				user = await searchUserByUsername(farcasterUsername);
+			} else {
+				return {
+					farcasterUser: undefined,
+					text: "No Farcaster username or FID provided",
+				};
+			}
+			if (!user) {
+				return {
+					farcasterUser: undefined,
+					text: "No user found",
+				};
+			}
+			// create user from neynar
+			await getOrCreateUserByFarcasterFid(user);
+
+			return {
+				farcasterUser: {
+					fid: user.fid,
+					username: user.username,
+				},
+				text: `Confirm that you want to track this farcaster user https://farcaster.xyz/${user.username} (${user.fid})`,
 			};
-			return `Tracked ${JSON.stringify(data)}'s trade on the blockchain`;
 		},
 	}),
 	leaderboard: tool({
 		description: "Get the leaderboard of the group",
 		inputSchema: z.object({}),
 		execute: async () => {
+			// TODO call endpoint to get latest leaderboard data
 			return "Leaderboard of the group\n\n1. @alice: 100\n2. @bob: 90\n3. @charlie: 80";
 		},
 	}),
 	help: tool({
-		description: "Get the help of the group",
+		description:
+			"Help the user gather more information about Alphie and its features",
 		inputSchema: z.object({}),
 		execute: async () => {
 			return HELP_HINT_MESSAGE;
@@ -72,22 +94,26 @@ const tools = {
  */
 export const aiGenerateAnswer = async ({
 	message,
-	messages,
+	xmtpMessages,
 	xmtpContext,
-	xmtpActions,
 }: {
 	message: string;
-	messages: ModelMessage[];
+	xmtpMessages: DecodedMessage[];
 	xmtpContext: MessageContext;
-	xmtpActions: ActionsContent;
 }) => {
+	const modelMessages = convertXmtpToAiModelMessages({
+		messages: xmtpMessages,
+		agentInboxId: xmtpContext.client.inboxId,
+	});
+	// 1. generate text with ai
 	const response = await generateText({
 		model: openai("gpt-4.1-mini"),
 		system: SYSTEM_PROMPT,
-		messages: [...messages, { role: "user", content: message }],
+		messages: [...modelMessages, { role: "user", content: message }],
 		tools,
 	});
-	console.log("AI Response:", JSON.stringify(response, null, 2));
+
+	// 2. parse the output
 	const outputStep = response.steps[0].content.find(
 		(part) => part.type === "tool-result",
 	);
@@ -96,12 +122,47 @@ export const aiGenerateAnswer = async ({
 		console.log("Output Text:", outputText);
 
 		const toolName = outputStep.toolName;
+		// 2.a help tool
 		if (toolName === "help") {
+			const xmtpActions = getXmtpActions({});
 			await sendActions(xmtpContext, xmtpActions);
 			return outputText;
+		}
+		// 2.b track tool
+		if (toolName === "alphie_track") {
+			const trackOutput = outputStep.output as unknown as
+				| {
+						farcasterUser: undefined;
+						text: string;
+				  }
+				| {
+						farcasterUser: {
+							fid: number;
+							username: string;
+						};
+						text: string;
+				  };
+			if (trackOutput.farcasterUser) {
+				await sendConfirmation({
+					ctx: xmtpContext,
+					message: `Confirm to start tracking @${trackOutput.farcasterUser.username} (${trackOutput.farcasterUser.fid})?`,
+					onYes: async (ctx) => {
+						// add user to group tracking
+						await addTrackedUserToGroup({
+							conversationId: xmtpContext.conversation.id,
+							userFid: trackOutput.farcasterUser.fid,
+							addedByUserInboxId: xmtpContext.client.inboxId,
+						});
+						await ctx.sendText("User added to group trackings!");
+					},
+					onNo: async (ctx) => await ctx.sendText("Ok, operation cancelled"),
+				});
+			}
+			return trackOutput.text;
 		}
 		return outputText;
 	}
 
+	// 3. no tool call, return the text
 	return response.text;
 };

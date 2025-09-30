@@ -19,9 +19,7 @@ export interface GroupUpdatedMessage {
 	};
 }
 
-// Extended context type to include thinking reaction helpers
-export interface ThinkingReactionContext extends MessageContext {
-	thinkingReaction?: {
-		removeThinkingEmoji: () => Promise<void>;
-	};
+// Extended context type to include inline actions metadata
+export interface InlineActionsContext extends MessageContext {
+	metadata?: Record<string, unknown>;
 }

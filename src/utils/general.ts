@@ -1,13 +1,7 @@
+import type { DecodedMessage } from "@xmtp/agent-sdk";
+import { convertToModelMessages, type UIMessage } from "ai";
 import { fromString } from "uint8arrays";
-
-/**
- * Get Ethereum address from inbox ID
- * @param inboxId - The inbox ID
- * @returns The Ethereum address
- */
-export const getEthereumAddressFromInboxId = (inboxId: string) => {
-	return inboxId.slice(0, 42);
-};
+import { ulid } from "ulid";
 
 /**
  * Get encryption key from string
@@ -39,4 +33,31 @@ export const formatAvatarSrc = (src: string) => {
 		}
 	}
 	return avatarSrc;
+};
+
+export const convertXmtpToAiModelMessages = ({
+	messages,
+	agentInboxId,
+}: {
+	messages: DecodedMessage[];
+	agentInboxId: string;
+}) => {
+	const uiMessages: UIMessage[] = messages.map((msg) => {
+		return {
+			id: msg.id || ulid(),
+			role:
+				msg.senderInboxId.toLowerCase() === agentInboxId.toLowerCase()
+					? "assistant"
+					: "user",
+			parts: [
+				{
+					type: "text",
+					text: JSON.stringify(msg.content),
+					state: "done",
+				},
+			],
+		};
+	});
+	const modelMessages = convertToModelMessages(uiMessages);
+	return modelMessages;
 };

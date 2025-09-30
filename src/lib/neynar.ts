@@ -1,7 +1,13 @@
-import ky from "ky";
-import type { NeynarUser } from "../types/index.js";
+import { Configuration, NeynarAPIClient } from "@neynar/nodejs-sdk";
+import type { User as NeynarUser } from "@neynar/nodejs-sdk/build/api/index.js";
 import { formatAvatarSrc } from "../utils/index.js";
 import { env } from "./env.js";
+
+const config = new Configuration({
+	apiKey: env.NEYNAR_API_KEY,
+});
+
+const neynarClient = new NeynarAPIClient(config);
 
 /**
  * Fetch multiple users from Neynar
@@ -9,21 +15,15 @@ import { env } from "./env.js";
  * @returns The users
  */
 export const fetchBulkUsersFromNeynar = async (
-	fids: string,
-	viewerFid?: string,
+	fids: number[],
+	viewerFid?: number,
 ): Promise<NeynarUser[]> => {
 	if (!fids) return [];
 
-	const data = await ky
-		.get<{ users: NeynarUser[] }>(
-			`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fids}${viewerFid ? `&viewer_fid=${viewerFid}` : ""}`,
-			{
-				headers: {
-					"x-api-key": env.NEYNAR_API_KEY,
-				},
-			},
-		)
-		.json();
+	const data = await neynarClient.fetchBulkUsers({
+		fids,
+		viewerFid,
+	});
 
 	return data.users || [];
 };
@@ -33,11 +33,11 @@ export const fetchBulkUsersFromNeynar = async (
  * @param fid - The FID of the user to fetch
  * @returns The user
  */
-export const fetchUserFromNeynar = async (
-	fid: string,
+export const fetchUserFromNeynarByFid = async (
+	fid: number,
 ): Promise<NeynarUser | null> => {
 	if (!fid) return null;
-	const users = await fetchBulkUsersFromNeynar(fid);
+	const users = await fetchBulkUsersFromNeynar([fid]);
 	if (!users || users.length === 0) return null;
 	return users[0];
 };
@@ -48,28 +48,24 @@ export const fetchUserFromNeynar = async (
  * @param viewerFid - The FID of the viewer
  * @returns The users
  */
-export const searchUsersByUsername = async (
+export const searchUserByUsername = async (
 	username: string,
-	viewerFid?: string,
-): Promise<NeynarUser[]> => {
-	const data = await ky
-		.get<{ result: { users: NeynarUser[] } }>(
-			`https://api.neynar.com/v2/farcaster/user/search?q=${username}${viewerFid ? `&viewer_fid=${viewerFid}` : ""}`,
-			{
-				headers: {
-					"x-api-key": env.NEYNAR_API_KEY,
-				},
-			},
-		)
-		.json();
+	viewerFid?: number,
+): Promise<NeynarUser | null> => {
+	const data = await neynarClient.searchUser({
+		q: username,
+		limit: 1,
+		viewerFid,
+	});
 
 	if (!data.result?.users) {
-		return [];
+		return null;
 	}
-	return data.result.users.map((user) => ({
+	const users = data.result.users.map((user) => ({
 		...user,
 		pfp_url: user.pfp_url ? formatAvatarSrc(user.pfp_url) : "",
 	}));
+	return users[0];
 };
 
 /**
@@ -79,19 +75,12 @@ export const searchUsersByUsername = async (
  */
 export const fetchUserByAddress = async (
 	address: string,
+	viewerFid?: number,
 ): Promise<NeynarUser | undefined> => {
-	const response = await ky.get<{ [key: string]: NeynarUser[] }>(
-		`https://api.neynar.com/v2/farcaster/user/bulk-by-address?addresses=${address}`,
-		{
-			headers: {
-				"x-api-key": env.NEYNAR_API_KEY,
-			},
-		},
-	);
-	if (!response.ok) {
-		return undefined;
-	}
-	const data = await response.json();
+	const data = await neynarClient.fetchBulkUsersByEthOrSolAddress({
+		addresses: [address],
+		viewerFid,
+	});
 	const userArray = data[address.toLowerCase()];
 	return userArray && userArray.length > 0 ? userArray[0] : undefined;
 };

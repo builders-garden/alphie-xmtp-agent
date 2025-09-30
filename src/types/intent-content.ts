@@ -3,6 +3,7 @@ import {
 	ContentTypeId,
 	type EncodedContent,
 } from "@xmtp/content-type-primitives";
+import z from "zod";
 
 /**
  * Content Type ID for Intent messages
@@ -19,12 +20,12 @@ export const ContentTypeIntent = new ContentTypeId({
  * Intent content structure
  * Users send this when they interact with actions
  */
-export type IntentContent = {
-	/** Unique identifier for the actions being responded to */
-	id: string;
-	/** ID of the specific action being executed */
-	actionId: string;
-};
+export const intentContentSchema = z.object({
+	id: z.string(),
+	actionId: z.string(),
+	metadata: z.record(z.string(), z.unknown()).optional(),
+});
+export type IntentContent = z.infer<typeof intentContentSchema>;
 
 /**
  * Intent codec for encoding/decoding Intent messages
@@ -54,7 +55,15 @@ export class IntentCodec implements ContentCodec<IntentContent> {
 
 		const decodedContent = new TextDecoder().decode(content.content);
 		try {
-			const parsed = JSON.parse(decodedContent) as IntentContent;
+			const safeParse = intentContentSchema.safeParse(
+				JSON.parse(decodedContent),
+			);
+			if (!safeParse.success) {
+				throw new Error(
+					`Failed to parse Intent content: ${safeParse.error.message}`,
+				);
+			}
+			const parsed = safeParse.data;
 			this.validateContent(parsed);
 			return parsed;
 		} catch (error: unknown) {

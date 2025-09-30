@@ -16,7 +16,7 @@ import {
 	getGroupByConversationId,
 	replaceGroupMembers,
 	updateGroup,
-} from "../lib/db/queries/group.query.js";
+} from "../lib/db/queries/index.js";
 import type { ActionsContent } from "../types/actions-content.js";
 import type { IntentContent } from "../types/intent-content.js";
 import type { GroupUpdatedMessage } from "../types/xmtp.types.js";
@@ -293,7 +293,7 @@ export const handleGroupUpdated = async (
 		// Reconcile members (replace with new state)
 		const membersSet = new Set<{ inboxId: string; address?: string }>(
 			group.members.map((i) => ({
-				inboxId: i.user.inboxId,
+				inboxId: i.user.inboxId ?? "",
 				address: i.user.address ?? undefined,
 			})),
 		);

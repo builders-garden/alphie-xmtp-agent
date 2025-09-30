@@ -1,4 +1,5 @@
 import type { MessageContext } from "@xmtp/agent-sdk";
+import { isAddress, isHex } from "viem";
 import {
 	type Action,
 	type ActionsContent,
@@ -61,12 +62,18 @@ export class ActionBuilder {
 		return builder;
 	}
 
-	add(
-		id: string,
-		label: string,
-		style?: "primary" | "secondary" | "danger",
-	): this {
-		this.actions.push({ id, label, style });
+	add({
+		id,
+		label,
+		style,
+		metadata,
+	}: {
+		id: string;
+		label: string;
+		style?: "primary" | "secondary" | "danger";
+		metadata?: Record<string, unknown>;
+	}): this {
+		this.actions.push({ id, label, style, metadata });
 		return this;
 	}
 
@@ -99,15 +106,28 @@ export async function sendActions(
 	lastSentActionMessage = message;
 }
 
-export async function sendConfirmation(
-	ctx: MessageContext,
-	message: string,
-	onYes: ActionHandler,
-	onNo?: ActionHandler,
-): Promise<void> {
+/**
+ * Send a confirmation menu
+ * @param ctx - The message context
+ * @param message - The message to send
+ * @param onYes - The action to perform when the user clicks yes
+ * @param onNo - The action to perform when the user clicks no
+ * @returns void
+ */
+export async function sendConfirmation({
+	ctx,
+	message,
+	onYes,
+	onNo,
+}: {
+	ctx: MessageContext;
+	message: string;
+	onYes: ActionHandler;
+	onNo?: ActionHandler;
+}): Promise<void> {
 	const timestamp = Date.now();
-	const yesId = `yes-${timestamp}`;
-	const noId = `no-${timestamp}`;
+	const yesId = `confirm-${timestamp}`;
+	const noId = `cancel-${timestamp}`;
 
 	registerAction(yesId, onYes);
 	registerAction(
@@ -119,26 +139,43 @@ export async function sendConfirmation(
 	);
 
 	await ActionBuilder.create(`confirm-${timestamp}`, message)
-		.add(yesId, "✅ Yes")
-		.add(noId, "❌ No", "danger")
+		.add({ id: yesId, label: "✅ Confirm" })
+		.add({ id: noId, label: "❌ Cancel", style: "danger" })
 		.send(ctx);
 }
 
-export async function sendSelection(
-	ctx: MessageContext,
-	message: string,
+/**
+ * Send a selection menu
+ * @param ctx - The message context
+ * @param message - The message to send
+ * @param options - The options to send
+ * @returns void
+ */
+export async function sendSelection({
+	ctx,
+	message,
+	options,
+}: {
+	ctx: MessageContext;
+	message: string;
 	options: Array<{
 		id: string;
 		label: string;
 		style?: "primary" | "secondary" | "danger";
+		metadata?: Record<string, unknown>;
 		handler: ActionHandler;
-	}>,
-): Promise<void> {
+	}>;
+}): Promise<void> {
 	const builder = ActionBuilder.create(`selection-${Date.now()}`, message);
 
 	options.forEach((option) => {
 		registerAction(option.id, option.handler);
-		builder.add(option.id, option.label, option.style);
+		builder.add({
+			id: option.id,
+			label: option.label,
+			style: option.style,
+			metadata: option.metadata,
+		});
 	});
 
 	await builder.send(ctx);
@@ -147,15 +184,13 @@ export async function sendSelection(
 // Validation helpers
 export const validators = {
 	inboxId: (input: string) => {
-		const pattern = /^[a-fA-F0-9]{64}$/;
-		return pattern.test(input.trim())
+		return isHex(input.trim()) && input.trim().length === 64
 			? { valid: true }
 			: { valid: false, error: "Invalid Inbox ID format (64 hex chars)" };
 	},
 
 	ethereumAddress: (input: string) => {
-		const pattern = /^0x[a-fA-F0-9]{40}$/;
-		return pattern.test(input.trim())
+		return isAddress(input.trim())
 			? { valid: true }
 			: {
 					valid: false,
@@ -175,6 +210,7 @@ export type MenuAction = {
 	id: string;
 	label: string;
 	style?: "primary" | "secondary" | "danger";
+	metadata?: Record<string, unknown>;
 	handler?: ActionHandler;
 	showNavigationOptions?: boolean;
 };
@@ -199,6 +235,13 @@ export function getRegisteredActions(): string[] {
 	return Array.from(actionHandlers.keys());
 }
 
+/**
+ * Show a menu
+ * @param ctx - The message context
+ * @param config - The config to show the menu from
+ * @param menuId - The id of the menu to show
+ * @returns void
+ */
 export async function showMenu(
 	ctx: MessageContext,
 	config: AppConfig,
@@ -218,7 +261,12 @@ export async function showMenu(
 	const builder = ActionBuilder.create(menuId, menu.title);
 
 	menu.actions.forEach((action) => {
-		builder.add(action.id, action.label, action.style);
+		builder.add({
+			id: action.id,
+			label: action.label,
+			style: action.style,
+			metadata: action.metadata,
+		});
 	});
 
 	await builder.send(ctx);
@@ -250,14 +298,22 @@ export async function showNavigationOptions(
 	// Add custom actions if provided
 	if (customActions) {
 		customActions.forEach((action) => {
-			navigationMenu.add(action.id, action.label, action.style);
+			navigationMenu.add({
+				id: action.id,
+				label: action.label,
+				style: action.style,
+			});
 		});
 	} else {
 		// Default navigation options - show all main menu items
 		const mainMenu = config.menus["main-menu"];
 		if (mainMenu) {
 			mainMenu.actions.forEach((action) => {
-				navigationMenu.add(action.id, action.label, action.style);
+				navigationMenu.add({
+					id: action.id,
+					label: action.label,
+					style: action.style,
+				});
 			});
 		}
 	}
@@ -265,6 +321,11 @@ export async function showNavigationOptions(
 	await navigationMenu.send(ctx);
 }
 
+/**
+ * Initialize the app from a config
+ * @param config - The config to initialize the app from
+ * @param options
+ */
 export function initializeAppFromConfig(
 	config: AppConfig,
 	options?: {

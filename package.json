@@ -38,6 +38,7 @@
     "@ai-sdk/openai": "2.1.0-beta.8",
     "@coinbase/onchainkit": "^1.1.0",
     "@libsql/client": "^0.15.15",
+    "@neynar/nodejs-sdk": "^3.34.0",
     "@t3-oss/env-core": "^0.13.8",
     "@xmtp/agent-sdk": "^1.0.1",
     "@xmtp/content-type-group-updated": "^2.0.2",

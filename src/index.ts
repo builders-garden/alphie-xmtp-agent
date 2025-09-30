@@ -13,18 +13,14 @@ import {
 	HELP_HINT_MESSAGE,
 	WELCOME_MESSAGE,
 } from "./lib/constants.js";
-import { getOrCreateGroupByConversationId } from "./lib/db/queries/group.query.js";
+import { getOrCreateGroupByConversationId } from "./lib/db/queries/index.js";
 import { env } from "./lib/env.js";
 import {
 	firstTimeInteractionMiddleware,
 	inlineActionsMiddleware,
-	thinkingReactionMiddleware,
 } from "./middlewares.js";
 import { ActionsCodec, IntentCodec } from "./types/index.js";
-import type {
-	GroupUpdatedMessage,
-	ThinkingReactionContext,
-} from "./types/xmtp.types.js";
+import type { GroupUpdatedMessage } from "./types/xmtp.types.js";
 import {
 	ERC20Handler,
 	getEncryptionKeyFromString,
@@ -76,18 +72,13 @@ async function main() {
 	registerXmtpActions({ erc20Handler, agentAddress });
 
 	// Agent middlewares
-	agent.use(
-		firstTimeInteractionMiddleware,
-		inlineActionsMiddleware,
-		thinkingReactionMiddleware,
-	);
+	agent.use(firstTimeInteractionMiddleware, inlineActionsMiddleware);
 
 	agent.on("message", async (ctx) => {
-		const thinkingCtx = ctx as ThinkingReactionContext;
 		console.log(`💬 Message received: ${JSON.stringify(ctx.message.content)}`);
 
 		try {
-			// skip if message has no content or is from self or is reaction
+			// skip if message has no content or is from the agent or its a reaction
 			if (
 				!filter.hasContent(ctx.message) ||
 				filter.fromSelf(ctx.message, ctx.client) ||
@@ -101,10 +92,6 @@ async function main() {
 			if (ctx.isDm()) {
 				console.log("✓ Handling DM message");
 				await ctx.sendText(DM_RESPONSE_MESSAGE);
-				// remove thinking emoji
-				if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
-					await thinkingCtx.thinkingReaction.removeThinkingEmoji();
-				}
 				return;
 			}
 
@@ -121,13 +108,8 @@ async function main() {
 				if (isNew) {
 					console.log("Sending welcome message to new group");
 					await ctx.sendText(WELCOME_MESSAGE);
-					const actions = getXmtpActions();
+					const actions = getXmtpActions({});
 					await sendActions(ctx, actions);
-
-					// remove thinking emoji
-					if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
-						await thinkingCtx.thinkingReaction.removeThinkingEmoji();
-					}
 				}
 
 				// Check if message is a group update
@@ -151,49 +133,32 @@ async function main() {
 				});
 				console.log("Should respond:", shouldRespond);
 				if (shouldRespond) {
-					const actions = getXmtpActions();
 					if (isSendHelpHint) {
 						await ctx.sendText(HELP_HINT_MESSAGE);
+						const actions = getXmtpActions({});
 						await sendActions(ctx, actions);
-						// remove thinking emoji
-						if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
-							await thinkingCtx.thinkingReaction.removeThinkingEmoji();
-						}
 						return;
 					}
 
-					// TODO get conversation history
+					// get conversation history
+					const xmtpMessages = await ctx.conversation.messages({
+						limit: 100,
+					});
+
 					const answer = await aiGenerateAnswer({
 						message: messageContent,
-						messages: [],
 						xmtpContext: ctx,
-						xmtpActions: actions,
+						xmtpMessages,
 					});
-					await ctx.sendText(answer);
-				}
-
-				// TODO: Handle reply for the group
-				if (ctx.message.contentType?.typeId === "reply") {
-					console.log("↩️ Handling reply");
-					await ctx.sendText("Handling reply");
-					if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
-						await thinkingCtx.thinkingReaction.removeThinkingEmoji();
+					if (answer) {
+						await ctx.sendText(answer);
 					}
-					return;
 				}
 			}
 		} catch (error) {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
 			console.error("❌ Error processing message:", errorMessage);
-			// remove thinking emoji
-			if (thinkingCtx.thinkingReaction?.removeThinkingEmoji) {
-				try {
-					await thinkingCtx.thinkingReaction.removeThinkingEmoji();
-				} catch (removeError) {
-					console.error("Error removing thinking emoji:", removeError);
-				}
-			}
 		}
 	});
 

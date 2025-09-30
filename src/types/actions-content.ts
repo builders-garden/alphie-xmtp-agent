@@ -27,6 +27,8 @@ export type Action = {
 	imageUrl?: string;
 	/** Optional visual style (primary|secondary|danger) */
 	style?: "primary" | "secondary" | "danger";
+	/** Optional metadata */
+	metadata?: Record<string, unknown>;
 	/** Optional ISO-8601 expiration timestamp */
 	expiresAt?: string;
 };
