@@ -1,25 +1,27 @@
-/**
- * Message Utilities
- *
- * This module contains utility functions for handling XMTP message parsing,
- * content extraction, and message validation logic.
- */
-
-import type { Client, DecodedMessage } from "@xmtp/agent-sdk";
+import {
+	type Client,
+	type DecodedMessage,
+	type GroupMember,
+	IdentifierKind,
+} from "@xmtp/agent-sdk";
 import type { GroupUpdated } from "@xmtp/content-type-group-updated";
 import type { Reaction } from "@xmtp/content-type-reaction";
 import type { RemoteAttachment } from "@xmtp/content-type-remote-attachment";
 import type { Reply } from "@xmtp/content-type-reply";
 import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
 import { AGENT_TRIGGERS, BOT_MENTIONS } from "../lib/constants.js";
+import type { Group } from "../lib/db/db.schema.js";
 import {
-	getGroupByConversationId,
-	replaceGroupMembers,
+	addGroupMembersByInboxIds,
+	deleteGroupById,
+	removeGroupMembersByInboxIds,
 	updateGroup,
 } from "../lib/db/queries/index.js";
-import type { ActionsContent } from "../types/actions-content.js";
-import type { IntentContent } from "../types/intent-content.js";
-import type { GroupUpdatedMessage } from "../types/xmtp.types.js";
+import type {
+	ActionsContent,
+	GroupUpdatedMessage,
+	IntentContent,
+} from "../types/index.js";
 
 /**
  * Check if a message is a reply to the agent
@@ -243,24 +245,35 @@ export function shouldSendHelpHint(message: string): boolean {
  *
  * @param message - The decoded XMTP message
  */
-export const handleGroupUpdated = async (
-	msg: GroupUpdatedMessage,
-): Promise<void> => {
+export const handleGroupUpdated = async ({
+	group,
+	xmtpMessage,
+	xmtpMembers,
+	agentAddress,
+	agentInboxId,
+}: {
+	group: Group;
+	xmtpMessage: GroupUpdatedMessage;
+	xmtpMembers: GroupMember[];
+	agentAddress: string;
+	agentInboxId: string;
+}): Promise<void> => {
 	// track member additions
-	const addedInboxes = msg.content.addedInboxes?.map((i) => i.inboxId) || [];
+	const addedInboxes =
+		xmtpMessage.content.addedInboxes?.map((i) => i.inboxId) || [];
 
 	// track member removals
 	const removedInboxes =
-		msg.content.removedInboxes?.map((i) => i.inboxId) || [];
+		xmtpMessage.content.removedInboxes?.map((i) => i.inboxId) || [];
 
 	// track metadata changes
-	const hasChangedName = msg.content.metadataFieldChanges?.find(
+	const hasChangedName = xmtpMessage.content.metadataFieldChanges?.find(
 		(c) => c.fieldName === "group_name",
 	);
-	const hasChangedDescription = msg.content.metadataFieldChanges?.find(
+	const hasChangedDescription = xmtpMessage.content.metadataFieldChanges?.find(
 		(c) => c.fieldName === "group_description",
 	);
-	const hasChangedImageUrl = msg.content.metadataFieldChanges?.find(
+	const hasChangedImageUrl = xmtpMessage.content.metadataFieldChanges?.find(
 		(c) => c.fieldName === "group_image_url_square",
 	);
 	if (
@@ -270,44 +283,56 @@ export const handleGroupUpdated = async (
 		hasChangedDescription ||
 		hasChangedImageUrl
 	) {
-		console.log("Group metadata changed:", {
-			addedInboxes,
-			removedInboxes,
-			hasChangedName,
-			hasChangedDescription,
-			hasChangedImageUrl,
-		});
-		const group = await getGroupByConversationId(msg.conversationId);
-		if (!group) {
-			console.error("Group not found", msg.conversationId);
-			return;
-		}
-		// Update group metadata if changed
-		await updateGroup({
-			id: group.id,
-			name: hasChangedName?.newValue ?? group.name,
-			description: hasChangedDescription?.newValue ?? group.description,
-			imageUrl: hasChangedImageUrl?.newValue ?? group.imageUrl,
-		});
+		console.log(
+			"Group metadata changed:",
+			JSON.stringify({
+				addedInboxes,
+				removedInboxes,
+				hasChangedName,
+				hasChangedDescription,
+				hasChangedImageUrl,
+			}),
+		);
 
-		// Reconcile members (replace with new state)
-		const membersSet = new Set<{ inboxId: string; address?: string }>(
-			group.members.map((i) => ({
-				inboxId: i.user.inboxId ?? "",
-				address: i.user.address ?? undefined,
-			})),
-		);
-		for (const id of addedInboxes) {
-			membersSet.add({ inboxId: id, address: undefined });
+		// Update group metadata if changed
+		if (hasChangedName || hasChangedDescription || hasChangedImageUrl) {
+			await updateGroup({
+				id: group.id,
+				name: hasChangedName?.newValue ?? group.name,
+				description: hasChangedDescription?.newValue ?? group.description,
+				imageUrl: hasChangedImageUrl?.newValue ?? group.imageUrl,
+			});
 		}
-		// If we had real current list, we would start from that; otherwise, we just apply deltas
-		// Remove those in removedInboxes
-		for (const removedId of removedInboxes) {
-			membersSet.delete({ inboxId: removedId, address: undefined });
+
+		// Remove members
+		if (removedInboxes.length > 0) {
+			const hasAgent = removedInboxes.includes(agentInboxId);
+			// if the agent is in the removed inboxes list, delete the group
+			//  this will also remove all group members and group tracked users
+			if (hasAgent) {
+				await deleteGroupById(group.id);
+			} else {
+				await removeGroupMembersByInboxIds(group.id, removedInboxes);
+			}
 		}
-		await replaceGroupMembers(
-			group.id,
-			Array.from(membersSet.values()).filter((i) => i.address !== undefined),
-		);
+
+		// Add members
+		if (addedInboxes.length > 0) {
+			// filter out the agent from the members
+			const membersToAdd = addedInboxes
+				.filter((inboxId) => inboxId !== agentInboxId)
+				.map((inboxId) => {
+					const member = xmtpMembers.find((m) => m.inboxId === inboxId);
+					const address = member?.accountIdentifiers.find(
+						(i) => i.identifierKind === IdentifierKind.Ethereum,
+					)?.identifier;
+					return { inboxId, address };
+				})
+				.filter((m) => m.address !== undefined && m.address !== agentAddress);
+
+			if (membersToAdd.length > 0) {
+				await addGroupMembersByInboxIds(group.id, membersToAdd);
+			}
+		}
 	}
 };

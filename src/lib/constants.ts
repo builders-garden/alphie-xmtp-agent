@@ -15,6 +15,8 @@ export type NetworkConfig = {
 	networkName: string;
 };
 
+export const MIN_0X_SWAP_AMOUNT = 100;
+
 // Available network configurations
 export const USDC_NETWORKS: Record<number, NetworkConfig> = {
 	[mainnet.id]: {

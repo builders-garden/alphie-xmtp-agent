@@ -2,7 +2,6 @@ import type { DecodedMessage } from "@xmtp/agent-sdk";
 import { convertToModelMessages, type UIMessage } from "ai";
 import { fromString } from "uint8arrays";
 import { ulid } from "ulid";
-
 /**
  * Get encryption key from string
  * @param encryptionKey - The encryption key string
@@ -35,6 +34,12 @@ export const formatAvatarSrc = (src: string) => {
 	return avatarSrc;
 };
 
+/**
+ * Convert XMTP messages to AI model messages
+ * @param messages - The XMTP messages to convert
+ * @param agentInboxId - The inbox ID of the agent
+ * @returns The AI model messages for the given XMTP messages
+ */
 export const convertXmtpToAiModelMessages = ({
 	messages,
 	agentInboxId,

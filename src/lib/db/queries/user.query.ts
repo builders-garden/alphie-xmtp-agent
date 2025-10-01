@@ -1,10 +1,10 @@
 import type { User as NeynarUser } from "@neynar/nodejs-sdk/build/api/index.js";
 import { eq, inArray } from "drizzle-orm";
 import type { Address } from "viem";
-import { formatAvatarSrc } from "../../../utils/general.js";
+import { formatAvatarSrc } from "../../../utils/index.js";
 import {
+	getBasename,
 	getBasenameAvatar,
-	getBasenameName,
 	getEnsAvatar,
 	getEnsName,
 } from "../../ens.js";
@@ -76,8 +76,10 @@ const createUserFromAddress = async (
 	let farcasterDisplayName: string | undefined = user?.display_name;
 
 	if (address) {
-		ensName = await getEnsName(address as Address);
-		baseName = await getBasenameName(address as Address);
+		const [ensName, baseName] = await Promise.all([
+			getEnsName(address as Address),
+			getBasename(address as Address),
+		]);
 		if (ensName) {
 			ensAvatarUrl = await getEnsAvatar(ensName);
 		}
@@ -152,4 +154,23 @@ export const getUsersByInboxIds = async (inboxIds: string[]) => {
 		.from(userTable)
 		.where(inArray(userTable.inboxId, inboxIds));
 	return users;
+};
+
+/**
+ * Get or create users by inboxIds
+ * @param data - The data to get or create users by inboxIds
+ * @returns
+ */
+export const getOrCreateUsersByInboxIds = async (
+	data: { inboxId: string; address?: string }[],
+) => {
+	const inboxIds = data.map((d) => d.inboxId);
+	const users = await getUsersByInboxIds(inboxIds);
+	const usersToCreate = data.filter(
+		(d) => !users.find((u) => u.inboxId === d.inboxId),
+	);
+	const usersCreated = await Promise.all(
+		usersToCreate.map((d) => createUserFromAddress(d.inboxId, d.address)),
+	);
+	return [...users, ...usersCreated];
 };

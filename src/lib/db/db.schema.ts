@@ -1,5 +1,10 @@
 import { relations, sql } from "drizzle-orm";
-import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+	primaryKey,
+	sqliteTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { ulid } from "ulid";
 
 /**
@@ -123,10 +128,6 @@ export type UpdateMessage = Partial<CreateMessage>;
 export const groupTrackedUserTable = sqliteTable(
 	"group_tracked_user",
 	{
-		id: text("id")
-			.primaryKey()
-			.notNull()
-			.$defaultFn(() => ulid()),
 		groupId: text("group_id")
 			.notNull()
 			.references(() => groupTable.id, { onDelete: "cascade" }),
@@ -139,6 +140,7 @@ export const groupTrackedUserTable = sqliteTable(
 		createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	},
 	(t) => [
+		primaryKey({ columns: [t.groupId, t.userId] }),
 		uniqueIndex("group_tracked_user_group_user_unique_idx").on(
 			t.groupId,
 			t.userId,

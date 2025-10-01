@@ -13,7 +13,15 @@ import {
 	type UpdateGroup,
 } from "../db.schema.js";
 import { db } from "../index.js";
-import { getOrCreateUserByInboxId, getUsersByInboxIds } from "./user.query.js";
+import {
+	addUsersToGroupTrackings,
+	removeUsersFromGroupTrackings,
+} from "./tracking.query.js";
+import {
+	getOrCreateUserByInboxId,
+	getOrCreateUsersByInboxIds,
+	getUsersByInboxIds,
+} from "./user.query.js";
 
 /**
  * Get group by id
@@ -63,32 +71,34 @@ export const updateGroup = async (group: UpdateGroup) => {
 };
 
 /**
+ * Delete group by id
+ * @param groupId - The group id
+ */
+export const deleteGroupById = async (groupId: string) => {
+	return await db.delete(groupTable).where(eq(groupTable.id, groupId));
+};
+
+/**
  * Upsert members for a group based on inboxIds
  */
 export const upsertGroupMembers = async (
 	groupId: string,
-	members: GroupMember[],
+	membersRaw: GroupMember[],
+	_agentAddress: string,
+	agentInboxId: string,
 ) => {
+	// filter out the agent from the members
+	const members = membersRaw.filter((m) => m.inboxId !== agentInboxId);
 	if (members.length === 0) return;
 
 	// Ensure all users exist for given inboxIds
-	const users = await Promise.all(
-		members.map(async (member) => {
-			console.log(
-				"member eth identifiers",
-				JSON.stringify(
-					member.accountIdentifiers.find(
-						(i) => i.identifierKind === IdentifierKind.Ethereum,
-					),
-				),
-			);
-			const address = member.accountIdentifiers.find(
-				(i) => i.identifierKind === IdentifierKind.Ethereum,
-			)?.identifier;
-			const user = await getOrCreateUserByInboxId(member.inboxId, address);
-			return user;
-		}),
-	);
+	const data = members.map((m) => ({
+		inboxId: m.inboxId,
+		address: m.accountIdentifiers.find(
+			(i) => i.identifierKind === IdentifierKind.Ethereum,
+		)?.identifier,
+	}));
+	const users = await getOrCreateUsersByInboxIds(data);
 
 	const rows: CreateGroupMember[] = users.map((u) => ({
 		groupId,
@@ -97,37 +107,34 @@ export const upsertGroupMembers = async (
 
 	// Insert ignoring duplicates via unique index (groupId,userId)
 	await db.insert(groupMemberTable).values(rows).onConflictDoNothing();
+
+	// add users to group trackings
+	await addUsersToGroupTrackings(rows);
 };
 
 /**
- * Replace group members to match the provided inboxIds
+ * Add group members by inboxIds (idempotent)
  */
-export const replaceGroupMembers = async (
+export const addGroupMembersByInboxIds = async (
 	groupId: string,
 	members: { inboxId: string; address?: string }[],
-) => {
-	// Get or create users for provided inboxIds
+): Promise<void> => {
+	if (members.length === 0) return;
+	// Ensure user s exist (creating as needed)
 	const users = await Promise.all(
 		members.map((member) =>
 			getOrCreateUserByInboxId(member.inboxId, member.address),
 		),
 	);
-	const userIds = users.map((u) => u.id);
+	const rows: CreateGroupMember[] = users.map((u) => ({
+		groupId,
+		userId: u.id,
+	}));
+	// Insert, ignoring duplicates
+	await db.insert(groupMemberTable).values(rows).onConflictDoNothing();
 
-	// Delete members not in new set in a single transaction
-	await db.transaction(async (tx) => {
-		await tx
-			.delete(groupMemberTable)
-			.where(and(eq(groupMemberTable.groupId, groupId)));
-
-		// Reinsert all current members
-		if (userIds.length > 0) {
-			await tx
-				.insert(groupMemberTable)
-				.values(userIds.map((uid) => ({ groupId, userId: uid })))
-				.onConflictDoNothing();
-		}
-	});
+	// add users to group trackings
+	await addUsersToGroupTrackings(rows);
 };
 
 /**
@@ -141,6 +148,11 @@ export const removeGroupMembersByInboxIds = async (
 	const users = await getUsersByInboxIds(inboxIds);
 	const userIds = users.map((u) => u.id);
 	if (userIds.length === 0) return;
+
+	// remove members from group tracked users
+	await removeUsersFromGroupTrackings(groupId, userIds);
+
+	// remove members from group members
 	await db
 		.delete(groupMemberTable)
 		.where(
@@ -160,6 +172,8 @@ export const removeGroupMembersByInboxIds = async (
 export const getOrCreateGroupByConversationId = async (
 	conversationId: string,
 	xmtpGroup: XmtpGroup,
+	agentAddress: string,
+	agentInboxId: string,
 ): Promise<{ group: Group; isNew: boolean }> => {
 	const group = await getGroupByConversationId(conversationId);
 	if (!group) {
@@ -170,7 +184,7 @@ export const getOrCreateGroupByConversationId = async (
 			imageUrl: xmtpGroup.imageUrl,
 		});
 		const members = await xmtpGroup.members();
-		await upsertGroupMembers(newGroup.id, members);
+		await upsertGroupMembers(newGroup.id, members, agentAddress, agentInboxId);
 		return { group: newGroup, isNew: true };
 	}
 	return { group, isNew: false };

@@ -175,7 +175,7 @@ export const get0xQuote = async ({
 };
 
 /**
- * Get a quote from the 0x API
+ * Get a price from the 0x API
  * @param chainId - The chain ID
  * @param buyToken - The token to buy
  * @param sellToken - The token to sell

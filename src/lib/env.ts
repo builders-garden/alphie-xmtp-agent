@@ -6,6 +6,18 @@ dotenv.config();
 const envSchema = z.object({
 	APP_URL: z.url().min(1),
 
+	// Server
+	PORT: z
+		.string()
+		.refine((val) => !Number.isNaN(Number(val)), {
+			message: "PORT must be a number",
+		})
+		.optional()
+		.default("3001"),
+
+	// Api secret key
+	API_SECRET_KEY: z.string().min(1),
+
 	// XMTP Agent
 	XMTP_ENV: z
 		.enum(["dev", "local", "production"])

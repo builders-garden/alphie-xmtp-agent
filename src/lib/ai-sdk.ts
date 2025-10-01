@@ -3,12 +3,15 @@ import type { User as NeynarUser } from "@neynar/nodejs-sdk/build/api/index.js";
 import type { DecodedMessage, MessageContext } from "@xmtp/agent-sdk";
 import { generateText, tool } from "ai";
 import { z } from "zod";
-import { getXmtpActions } from "../actions.js";
-import { convertXmtpToAiModelMessages } from "../utils/index.js";
-import { sendActions, sendConfirmation } from "../utils/inline-actions.js";
+import {
+	convertXmtpToAiModelMessages,
+	getXmtpActions,
+	sendActions,
+	sendConfirmation,
+} from "../utils/index.js";
 import { HELP_HINT_MESSAGE, SYSTEM_PROMPT } from "./constants.js";
 import {
-	addTrackedUserToGroup,
+	addUserToGroupTrackingByFid,
 	getOrCreateUserByFarcasterFid,
 } from "./db/queries/index.js";
 import { env } from "./env.js";
@@ -73,7 +76,8 @@ const tools = {
 		inputSchema: z.object({}),
 		execute: async () => {
 			// TODO call endpoint to get latest leaderboard data
-			return "Leaderboard of the group\n\n1. @alice: 100\n2. @bob: 90\n3. @charlie: 80";
+			const leaderboard = "1. @alice: 100\n2. @bob: 90\n3. @charlie: 80";
+			return `🏆 Leaderboard of the group\n\n${leaderboard}`;
 		},
 	}),
 	help: tool({
@@ -124,7 +128,7 @@ export const aiGenerateAnswer = async ({
 		const toolName = outputStep.toolName;
 		// 2.a help tool
 		if (toolName === "help") {
-			const xmtpActions = getXmtpActions({});
+			const xmtpActions = getXmtpActions();
 			await sendActions(xmtpContext, xmtpActions);
 			return outputText;
 		}
@@ -148,7 +152,7 @@ export const aiGenerateAnswer = async ({
 					message: `Confirm to start tracking @${trackOutput.farcasterUser.username} (${trackOutput.farcasterUser.fid})?`,
 					onYes: async (ctx) => {
 						// add user to group tracking
-						await addTrackedUserToGroup({
+						await addUserToGroupTrackingByFid({
 							conversationId: xmtpContext.conversation.id,
 							userFid: trackOutput.farcasterUser.fid,
 							addedByUserInboxId: xmtpContext.client.inboxId,

@@ -1,10 +1,10 @@
 import type { MessageContext } from "@xmtp/agent-sdk";
-import { isAddress, isHex } from "viem";
+import { type Hex, isAddress, isHex } from "viem";
 import {
 	type Action,
 	type ActionsContent,
 	ContentTypeActions,
-} from "../types/actions-content.js";
+} from "../types/index.js";
 
 // Core types
 export type ActionHandler = (ctx: MessageContext) => Promise<void>;
@@ -142,6 +142,35 @@ export async function sendConfirmation({
 		.add({ id: yesId, label: "✅ Confirm" })
 		.add({ id: noId, label: "❌ Cancel", style: "danger" })
 		.send(ctx);
+}
+
+/**
+ * Send copy trade actions
+ * @param ctx - The message context
+ * @param message - The message to send
+ * @param erc20 - The ERC20 token info
+ * @returns void
+ */
+export function buildCopyTradeAction({
+	message,
+	transactionHash,
+	onCopyTrade,
+}: {
+	message: string;
+	transactionHash: Hex;
+	onCopyTrade: ActionHandler;
+}) {
+	const timestamp = Date.now();
+	const copyTradeId = `copy-trade-${transactionHash}-${timestamp}`;
+
+	registerAction(copyTradeId, onCopyTrade);
+
+	return ActionBuilder.create(
+		`copy-trade-${transactionHash}-${timestamp}`,
+		message,
+	)
+		.add({ id: copyTradeId, label: "💰 Copy Trade" })
+		.build();
 }
 
 /**

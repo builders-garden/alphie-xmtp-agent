@@ -17,14 +17,14 @@ cd alphie-xmtp-agent
 pnpm install
 ```
 
-3. Set up environment variables, copy and fill `.env.example` to `.env`
+3. Set up environment variables, copy and fill all the variables `.env.example` to `.env`
 
 ```bash
 cp .env.example .env
 vi .env
 ```
 
-4. Generate keys:
+4. Generate wallet keys and encryption key:
 
 ```bash
 pnpm run gen:keys
@@ -42,4 +42,22 @@ Run the development server
 
 ```bash
 pnpm run dev
+```
+
+## Testing
+
+To run the copy trade webhook tests, start the server first and then just run this on your terminal:
+
+```bash
+# sell 1 $USDC for $ZORA on Base Mainnet
+curl -X POST http://localhost:3001/api/v1/copy-trade \
+  -H "x-api-secret: $API_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"user": {"fid": 189636, "username": "bianc8.eth"}, "transaction": {"chainId": 8453, "transactionHash": "0x3d4d44b40b5bbbd659c64ce16277f5a0ef2390afc9126b4932de7bb320769649", "buyToken": "0x1111111111166b7FE7bd91427724B487980aFc69", "sellToken": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "sellAmount": "1"}}'
+```
+
+or use the bash script:
+
+```bash
+bash tests/test-webhook.sh
 ```
