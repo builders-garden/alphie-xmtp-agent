@@ -21,18 +21,24 @@ export const get0xQuote = async ({
 	chainId,
 	buyToken,
 	sellToken,
-	sellAmount,
+	sellAmountInDecimals,
 	taker,
 }: {
 	chainId: number;
 	buyToken: Address;
 	sellToken: Address;
-	sellAmount: string;
+	sellAmountInDecimals: string;
 	taker: Address;
 }): Promise<QuoteResponse> => {
 	// Validate required parameters
 	try {
-		if (!chainId || !buyToken || !sellToken || !sellAmount || !taker) {
+		if (
+			!chainId ||
+			!buyToken ||
+			!sellToken ||
+			!sellAmountInDecimals ||
+			!taker
+		) {
 			return {
 				status: "nok",
 				error: "Missing required parameters",
@@ -52,7 +58,7 @@ export const get0xQuote = async ({
 			chainId: chainId.toString(),
 			buyToken,
 			sellToken,
-			sellAmount,
+			sellAmount: sellAmountInDecimals,
 			taker,
 		});
 
@@ -144,9 +150,10 @@ export const get0xQuote = async ({
 		}
 
 		const data = await response.json();
+		console.log("0x API response", JSON.stringify(data));
 
 		// Extract transaction details from the response
-		const { transaction } = data;
+		const { transaction, allowanceTarget, issues } = data;
 		if (!transaction) {
 			return {
 				status: "nok",
@@ -159,6 +166,9 @@ export const get0xQuote = async ({
 			to: transaction.to,
 			data: transaction.data,
 			value: transaction.value,
+			gas: transaction.gas,
+			allowanceTarget,
+			needsApprove: issues?.allowance !== null,
 		};
 
 		return {

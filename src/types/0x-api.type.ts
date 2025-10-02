@@ -22,8 +22,12 @@ export const zeroXBalanceIssueSchema = z.object({
 export type ZeroXBalanceIssue = z.infer<typeof zeroXBalanceIssueSchema>;
 
 export const zeroXIssuesSchema = z.object({
-	allowance: z.union([zeroXAllowanceIssueSchema, z.object({}).strict()]),
-	balance: z.union([zeroXBalanceIssueSchema, z.object({}).strict()]),
+	allowance: z.union([
+		zeroXAllowanceIssueSchema,
+		z.object({}).strict(),
+		z.null(),
+	]),
+	balance: z.union([zeroXBalanceIssueSchema, z.object({}).strict(), z.null()]),
 	simulationIncomplete: z.boolean(),
 	invalidSourcesPassed: z.array(z.string()),
 });
@@ -66,7 +70,7 @@ export const zeroXTransactionSchema = z.object({
 	data: z.string(),
 	gas: z.string(),
 	gasPrice: z.string(),
-	value: z.string(),
+	value: z.string().optional(),
 });
 export type ZeroXTransaction = z.infer<typeof zeroXTransactionSchema>;
 
@@ -111,6 +115,7 @@ export type PriceResponse = z.infer<typeof priceResponse>;
 // Quote response (has transaction field)
 export const zeroXQuoteResponseSchema = zeroXBaseResponseSchema.extend({
 	transaction: zeroXTransactionSchema,
+	allowanceTarget: z.string().optional(),
 });
 export type ZeroXQuoteResponse = z.infer<typeof zeroXQuoteResponseSchema>;
 
@@ -118,7 +123,10 @@ export type ZeroXQuoteResponse = z.infer<typeof zeroXQuoteResponseSchema>;
 export const zeroXQuoteTransactionResponseSchema = z.object({
 	to: z.string(),
 	data: z.string(),
-	value: z.string(),
+	value: z.string().optional(),
+	gas: z.string(),
+	allowanceTarget: z.string().optional(),
+	needsApprove: z.boolean(),
 });
 export type ZeroXQuoteTransactionResponse = z.infer<
 	typeof zeroXQuoteTransactionResponseSchema

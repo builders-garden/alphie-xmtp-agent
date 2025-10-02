@@ -9,9 +9,9 @@ import {
 import { env } from "../lib/env.js";
 import type { HandleCopyTradeSchema } from "../types/index.js";
 import {
-	getBalance,
 	getEstimatedGasFee,
 	getEthBalance,
+	getTokenBalance,
 	swapERC20,
 } from "../utils/index.js";
 import {
@@ -84,8 +84,9 @@ export const getXmtpCopyTradeAction = ({
 
 			// check if a user has enough balance of the sell token
 			const [tokenBalance, ethBalance, gasEstimate] = await Promise.all([
-				getBalance({
-					tokenAddress: transaction.sellToken,
+				getTokenBalance({
+					sellTokenAddress: transaction.sellToken,
+					buyTokenAddress: transaction.buyToken,
 					address: senderAddress as Address,
 					chainId: transaction.chainId,
 				}),
@@ -105,7 +106,7 @@ export const getXmtpCopyTradeAction = ({
 				}),
 			);
 			let sellAmount = Number.parseFloat(transaction.sellAmount);
-			const sellAmountInDecimals = parseUnits(
+			let sellAmountInDecimals = parseUnits(
 				transaction.sellAmount,
 				tokenBalance.tokenDecimals,
 			);
@@ -122,9 +123,9 @@ export const getXmtpCopyTradeAction = ({
 				Number.parseFloat(ethBalance.balanceRaw) >
 				Number.parseFloat(gasEstimate.maxFeePerGas);
 			const hasEnoughToken =
-				Number.parseFloat(tokenBalance.balanceRaw) >= sellAmountInDecimals;
+				BigInt(tokenBalance.balanceRaw) >= sellAmountInDecimals;
 			const hasSomeToken =
-				Number.parseFloat(tokenBalance.balanceRaw) >= MIN_0X_SWAP_AMOUNT;
+				BigInt(tokenBalance.balanceRaw) >= BigInt(MIN_0X_SWAP_AMOUNT);
 			console.log(
 				"check balances",
 				JSON.stringify({
@@ -151,14 +152,16 @@ export const getXmtpCopyTradeAction = ({
 					await ctx.sendText("❌ User does not have enough balance");
 					return;
 				}
-				// if user has some token balance, use 50% of the balance for the swap
-				sellAmount = (Number(tokenBalance.balanceRaw) * 50) / 100;
+				// if user has some token balance, use 50% of the balance for the swap (base units)
+				sellAmountInDecimals = BigInt(tokenBalance.balanceRaw) / BigInt(2);
+				sellAmount =
+					Number(sellAmountInDecimals) / 10 ** tokenBalance.tokenDecimals;
 			}
 
 			// get 0x quote
 			const quote = await get0xQuote({
 				...transaction,
-				sellAmount: sellAmount.toString(),
+				sellAmountInDecimals: sellAmountInDecimals.toString(),
 				taker: senderAddress as Address,
 			});
 			if (quote.status === "nok") {
@@ -174,6 +177,15 @@ export const getXmtpCopyTradeAction = ({
 				data: quote.data.data as Hex,
 				value: quote.data.value,
 				chainId: transaction.chainId,
+				sellTokenSymbol: tokenBalance.sellSymbol,
+				buyTokenSymbol: tokenBalance.buySymbol,
+				tokenDecimals: tokenBalance.tokenDecimals,
+				tokenAddress: transaction.sellToken,
+				gas: quote.data.gas,
+				spender: quote.data.allowanceTarget as Address,
+				needsApprove: quote.data.needsApprove,
+				sellAmount,
+				sellAmountInDecimals,
 			});
 
 			// send swap ERC20 calls

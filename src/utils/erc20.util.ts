@@ -41,58 +41,96 @@ export const getEstimatedGasFee = async ({
  * @param to - The address of the recipient
  * @param data - The data of the swap
  * @param value - The value of the swap
+ * @param gas - The gas for the swap
  * @param chainId - The chain identifier
+ * @param sellTokenSymbol - The symbol of the token to sell
+ * @param buyTokenSymbol - The symbol of the token to buy
+ * @param tokenDecimals - The decimals of the token
+ * @param tokenAddress - The address of the ERC20 token
+ * @param spender - The address of the spender
+ * @param needsApprove - Whether the swap needs approval
+ * @param sellAmount - The amount of the token to sell
+ * @param sellAmountInDecimals - The amount of the token to sell in base units
  * @returns The calls for the swap
  */
-export function swapERC20({
-	fromAddress,
-	to,
-	data,
-	value,
-	chainId,
-}: {
+export function swapERC20(data: {
 	fromAddress: Address;
-	to: Address;
-	data: Hex;
-	value: string;
+	to: Address; // 0x allowance-holder contract to call for the swap
+	data: Hex; // calldata for the swap
+	value?: string; // eth value to send with the swap (usually 0 for ERC20->ERC20)
+	gas: string;
 	chainId: number;
+	sellTokenSymbol: string;
+	buyTokenSymbol: string;
+	tokenDecimals: number;
+	tokenAddress: Address; // ERC20 token contract to approve
+	spender: Address; // 0x allowanceTarget (spender) from quote
+	needsApprove: boolean;
+	sellAmount: number; // amount in token base units to sell
+	sellAmountInDecimals: bigint; // amount in token base units to sell
 }): WalletSendCallsParams {
 	console.log(
 		"swapERC20 params",
 		JSON.stringify({
-			chainId,
-			fromAddress,
-			to,
-			value,
-			data,
+			...data,
+			sellAmount: data.sellAmount.toString(),
+			sellAmountInDecimals: data.sellAmountInDecimals.toString(),
 		}),
 	);
+	const calls: WalletSendCallsParams["calls"] = [];
 
-	const calls = {
-		version: "1.0",
-		from: fromAddress,
-		chainId: toHex(chainId),
-		calls: [
-			{
-				to,
-				data,
-				value: toHex(value),
-				metadata: {
-					description: `Swap ${value}`,
-					transactionType: "swap",
-					currency: "USDC",
-					amount: value,
-					hostname: new URL(env.APP_URL).hostname,
-					networkId: chainId.toString(),
-					faviconUrl:
-						"https://www.google.com/s2/favicons?sz=256&domain_url=https%3A%2F%2Fwww.coinbase.com%2Fwallet",
-					title: "Alphie XMTP Agent",
-				},
+	// if needed, add approve call for the 0x swap api
+	if (data.needsApprove) {
+		const approvedMethodData = encodeFunctionData({
+			abi: erc20Abi,
+			functionName: "approve",
+			args: [data.spender, data.sellAmountInDecimals],
+		});
+
+		calls.push({
+			to: data.tokenAddress,
+			data: approvedMethodData,
+			// approve has no ETH value
+			metadata: {
+				description: `Approve ${data.sellAmount.toFixed(2)} ${data.sellTokenSymbol}`,
+				transactionType: "approve",
+				currency: data.sellTokenSymbol,
+				amount: data.sellAmount.toFixed(2),
+				decimals: data.tokenDecimals.toString(),
+				networkId: data.chainId.toString(),
+				hostname: new URL(env.APP_URL).hostname,
+				faviconUrl:
+					"https://www.google.com/s2/favicons?sz=256&domain_url=https%3A%2F%2Fwww.coinbase.com%2Fwallet",
+				title: "Alphie XMTP Agent",
 			},
-		],
-	};
+		});
+	}
+	// swap ERC20 call
+	calls.push({
+		to: data.to,
+		data: data.data,
+		value: data.value ? toHex(data.value) : undefined,
+		gas: toHex(data.gas),
+		metadata: {
+			description: `Swap ${data.sellAmount.toFixed(2)} ${data.sellTokenSymbol} for ${data.buyTokenSymbol}`,
+			transactionType: "swap",
+			currency: data.sellTokenSymbol,
+			amount: data.sellAmount.toFixed(2),
+			decimals: data.tokenDecimals.toString(),
+			hostname: new URL(env.APP_URL).hostname,
+			networkId: data.chainId.toString(),
+			faviconUrl:
+				"https://www.google.com/s2/favicons?sz=256&domain_url=https%3A%2F%2Fwww.coinbase.com%2Fwallet",
+			title: "Alphie XMTP Agent",
+		},
+	});
 
-	return calls;
+	return {
+		version: "1.0",
+		from: data.fromAddress,
+		chainId: toHex(data.chainId),
+		calls,
+	};
 }
 
 /**
@@ -119,43 +157,142 @@ function getChain(chainId: number) {
 
 /**
  * Get ERC20 balance for a given address
- * @param tokenAddress - The address of the ERC20 token
+ * @param sellTokenAddress - The address of the ERC20 token to sell
+ * @param buyTokenAddress - The address of the ERC20 token to buy
  * @param tokenDecimals - The number of decimals of the ERC20 token
  * @param address - The address to get the balance of
  * @returns The balance of the ERC20 token
  */
-export async function getBalance({
-	tokenAddress,
-	address,
+export async function getTokenInfo({
+	sellTokenAddress,
+	buyTokenAddress,
 	chainId,
 }: {
-	tokenAddress: Address;
-	address: Address;
+	sellTokenAddress: Address;
+	buyTokenAddress: Address;
 	chainId: number;
-}): Promise<{ balanceRaw: string; balance: string; tokenDecimals: number }> {
+}): Promise<{
+	tokenDecimals: number;
+	sellSymbol: string;
+	buySymbol: string;
+}> {
 	const chain = getChain(chainId);
 	const publicClient = createPublicClient({
 		chain,
 		transport: http(),
 	});
-	const [balance, tokenDecimals] = await Promise.all([
-		publicClient.readContract({
-			address: tokenAddress,
-			abi: erc20Abi,
-			functionName: "balanceOf",
-			args: [address],
-		}),
-		await publicClient.readContract({
-			address: tokenAddress,
-			abi: erc20Abi,
-			functionName: "decimals",
-		}),
-	]);
+	const wagmiContract = {
+		address: sellTokenAddress,
+		abi: erc20Abi,
+	} as const;
+	// Similar to readContract but batches multiple calls https://viem.sh/docs/contract/multicall
+	const [tokenDecimals, sellSymbol, buySymbol] = await publicClient.multicall({
+		contracts: [
+			{
+				...wagmiContract,
+				functionName: "decimals",
+			},
+			{
+				...wagmiContract,
+				functionName: "symbol",
+			},
+			{
+				abi: erc20Abi,
+				address: buyTokenAddress,
+				functionName: "symbol",
+			},
+		],
+	});
+	if (!tokenDecimals.result || !sellSymbol.result || !buySymbol.result) {
+		console.error("Unable to get token decimals, sell symbol, or buy symbol");
+		throw new Error("Unable to get token decimals, sell symbol, or buy symbol");
+	}
 
 	return {
-		balanceRaw: balance.toString(),
-		balance: formatUnits(balance, tokenDecimals),
-		tokenDecimals,
+		tokenDecimals: tokenDecimals.result,
+		sellSymbol: sellSymbol.result,
+		buySymbol: buySymbol.result,
+	};
+}
+
+/**
+ * Get ERC20 balance for a given address
+ * @param sellTokenAddress - The address of the ERC20 token to sell
+ * @param buyTokenAddress - The address of the ERC20 token to buy
+ * @param tokenDecimals - The number of decimals of the ERC20 token
+ * @param address - The address to get the balance of
+ * @returns The balance of the ERC20 token
+ */
+export async function getTokenBalance({
+	sellTokenAddress,
+	buyTokenAddress,
+	address,
+	chainId,
+}: {
+	sellTokenAddress: Address;
+	buyTokenAddress: Address;
+	address: Address;
+	chainId: number;
+}): Promise<{
+	balanceRaw: string;
+	balance: string;
+	tokenDecimals: number;
+	sellSymbol: string;
+	buySymbol: string;
+}> {
+	const chain = getChain(chainId);
+	const publicClient = createPublicClient({
+		chain,
+		transport: http(),
+	});
+	const wagmiContract = {
+		address: sellTokenAddress,
+		abi: erc20Abi,
+	} as const;
+	// Similar to readContract but batches multiple calls https://viem.sh/docs/contract/multicall
+	const [balance, tokenDecimals, sellSymbol, buySymbol] =
+		await publicClient.multicall({
+			contracts: [
+				{
+					...wagmiContract,
+					functionName: "balanceOf",
+					args: [address],
+				},
+				{
+					...wagmiContract,
+					functionName: "decimals",
+				},
+				{
+					...wagmiContract,
+					functionName: "symbol",
+				},
+				{
+					abi: erc20Abi,
+					address: buyTokenAddress,
+					functionName: "symbol",
+				},
+			],
+		});
+	if (
+		!balance.result ||
+		!tokenDecimals.result ||
+		!sellSymbol.result ||
+		!buySymbol.result
+	) {
+		console.error(
+			"Unable to get balance, token decimals, sell symbol, or buy symbol",
+		);
+		throw new Error(
+			"Unable to get balance, token decimals, sell symbol, or buy symbol",
+		);
+	}
+
+	return {
+		balanceRaw: balance.result.toString(),
+		balance: formatUnits(balance.result, tokenDecimals.result),
+		tokenDecimals: tokenDecimals.result,
+		sellSymbol: sellSymbol.result,
+		buySymbol: buySymbol.result,
 	};
 }
 

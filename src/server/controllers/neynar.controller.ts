@@ -6,7 +6,7 @@ import {
 	ContentTypeActions,
 	handleCopyTradeSchema,
 } from "../../types/index.js";
-import { getXmtpCopyTradeAction } from "../../utils/index.js";
+import { getTokenInfo, getXmtpCopyTradeAction } from "../../utils/index.js";
 
 /**
  * Handle copy trade controller
@@ -54,7 +54,13 @@ export const handleCopyTrade = async (req: Request, res: Response) => {
 		}
 
 		// build copy trade action
-		const actionMessage = `Copy trade @${user.username} (${user.fid})?`;
+		const token = await getTokenInfo({
+			sellTokenAddress: transaction.sellToken,
+			buyTokenAddress: transaction.buyToken,
+			chainId: transaction.chainId,
+		});
+		const sellAmount = Number.parseFloat(transaction.sellAmount).toFixed(2);
+		const actionMessage = `Copy trade @${user.username}: Swap ${sellAmount} ${token.sellSymbol} for ${token.buySymbol}`;
 		const action = getXmtpCopyTradeAction({
 			actionMessage,
 			transaction,
@@ -78,7 +84,7 @@ export const handleCopyTrade = async (req: Request, res: Response) => {
 			// send copy trade action to the group chat
 			await conversation.send(action, ContentTypeActions);
 			await conversation.send(
-				`${actionMessage} ${env.APP_URL}/t/${transaction.transactionHash}`,
+				`See more details here ${env.APP_URL}/t/${transaction.transactionHash}`,
 			);
 		}
 
