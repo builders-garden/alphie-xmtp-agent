@@ -1,5 +1,4 @@
-import type { Address } from "viem";
-import { base, mainnet } from "viem/chains";
+import { arbitrum, base, mainnet, optimism, polygon } from "viem/chains";
 
 // Storage directory constants
 export const STORAGE_CONFIG = {
@@ -9,27 +8,33 @@ export const STORAGE_CONFIG = {
 
 // Network configuration type
 export type NetworkConfig = {
-	tokenAddress: Address;
-	chainId: number;
-	decimals: number;
+	networkId: string;
 	networkName: string;
 };
 
 export const MIN_0X_SWAP_AMOUNT = 100;
 
 // Available network configurations
-export const USDC_NETWORKS: Record<number, NetworkConfig> = {
+export const XMTP_NETWORKS: Record<number, NetworkConfig> = {
 	[mainnet.id]: {
-		tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum Mainnet
-		chainId: mainnet.id,
-		decimals: 6,
-		networkName: "Ethereum Mainnet",
+		networkId: "ethereum-mainnet",
+		networkName: "Ethereum",
 	},
 	[base.id]: {
-		tokenAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC on Base Mainnet
-		chainId: base.id,
-		decimals: 6,
+		networkId: "base-mainnet",
 		networkName: "Base",
+	},
+	[arbitrum.id]: {
+		networkId: "arbitrum-mainnet",
+		networkName: "Arbitrum",
+	},
+	[optimism.id]: {
+		networkId: "optimism-mainnet",
+		networkName: "Optimism",
+	},
+	[polygon.id]: {
+		networkId: "polygon-mainnet",
+		networkName: "Polygon",
 	},
 };
 

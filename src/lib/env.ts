@@ -41,6 +41,9 @@ const envSchema = z.object({
 
 	// 0x api key
 	ZEROX_API_KEY: z.string().min(1),
+
+	// Pimlico API KEY, get yours at https://dashboard.pimlico.io
+	PIMLICO_API_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;
