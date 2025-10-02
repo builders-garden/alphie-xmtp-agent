@@ -1,6 +1,10 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import type { User as NeynarUser } from "@neynar/nodejs-sdk/build/api/index.js";
-import type { DecodedMessage, MessageContext } from "@xmtp/agent-sdk";
+import type {
+	DecodedMessage,
+	GroupMember,
+	MessageContext,
+} from "@xmtp/agent-sdk";
 import { generateText, tool } from "ai";
 import { z } from "zod";
 import {
@@ -99,15 +103,21 @@ const tools = {
 export const aiGenerateAnswer = async ({
 	message,
 	xmtpMessages,
+	xmtpMembers,
+	agentAddress,
 	xmtpContext,
 }: {
 	message: string;
 	xmtpMessages: DecodedMessage[];
+	xmtpMembers: GroupMember[];
+	agentAddress: string;
 	xmtpContext: MessageContext;
 }) => {
 	const modelMessages = convertXmtpToAiModelMessages({
 		messages: xmtpMessages,
 		agentInboxId: xmtpContext.client.inboxId,
+		agentAddress,
+		xmtpMembers,
 	});
 	// 1. generate text with ai
 	const response = await generateText({

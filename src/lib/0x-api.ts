@@ -1,5 +1,4 @@
-import ky from "ky";
-import { type Address, isAddress } from "viem";
+import { type Address, getAddress, isAddress } from "viem";
 import type {
 	PriceResponse,
 	QuoteResponse,
@@ -23,12 +22,14 @@ export const get0xQuote = async ({
 	sellToken,
 	sellAmountInDecimals,
 	taker,
+	agentAddress,
 }: {
 	chainId: number;
 	buyToken: Address;
 	sellToken: Address;
 	sellAmountInDecimals: string;
 	taker: Address;
+	agentAddress: Address;
 }): Promise<QuoteResponse> => {
 	// Validate required parameters
 	try {
@@ -60,6 +61,8 @@ export const get0xQuote = async ({
 			sellToken,
 			sellAmount: sellAmountInDecimals,
 			taker,
+			swapFeeRecipient: getAddress(agentAddress),
+			swapFeeBps: "100", // 1% affiliate fee. Denoted in Bps
 		});
 
 		// Optional parameters
@@ -75,6 +78,7 @@ export const get0xQuote = async ({
 			"sellEntireBalance",
 		];
 
+		// validate params
 		for (const param of optionalParams) {
 			const value = params.get(param);
 			if (value) {
@@ -85,12 +89,13 @@ export const get0xQuote = async ({
 						"swapFeeRecipient",
 						"swapFeeToken",
 						"tradeSurplusRecipient",
+						"swapFeeToken",
 					].includes(param)
 				) {
 					if (!isAddress(value)) {
 						return {
 							status: "nok",
-							error: "Invalid $paramaddress format",
+							error: `Invalid ${param} address format`,
 						};
 					}
 				}
@@ -102,16 +107,6 @@ export const get0xQuote = async ({
 						return {
 							status: "nok",
 							error: `${param} must be between 0 and 10000`,
-						};
-					}
-				}
-
-				// Validate swapFeeToken format if provided
-				if (param === "swapFeeToken") {
-					if (!isAddress(value)) {
-						return {
-							status: "nok",
-							error: "Invalid swapFeeToken address format",
 						};
 					}
 				}
@@ -131,7 +126,7 @@ export const get0xQuote = async ({
 		}
 
 		// Make request to 0x API
-		const response = await ky.get<ZeroXQuoteResponse>(
+		const response = await fetch(
 			`https://api.0x.org/swap/allowance-holder/quote?${params.toString()}`,
 			{
 				headers: {
@@ -149,8 +144,7 @@ export const get0xQuote = async ({
 			};
 		}
 
-		const data = await response.json();
-		console.log("0x API response", JSON.stringify(data));
+		const data = (await response.json()) as ZeroXQuoteResponse;
 
 		// Extract transaction details from the response
 		const { transaction, allowanceTarget, issues } = data;
@@ -260,7 +254,7 @@ export const get0xPrice = async ({
 					if (!isAddress(value)) {
 						return {
 							status: "nok",
-							error: "Invalid $paramaddress format",
+							error: `Invalid ${param} address format`,
 						};
 					}
 				}
@@ -281,7 +275,7 @@ export const get0xPrice = async ({
 		}
 
 		// Make request to 0x API
-		const response = await ky.get<ZeroXPriceResponse>(
+		const response = await fetch(
 			`https://api.0x.org/swap/allowance-holder/price?${params.toString()}`,
 			{
 				headers: {
@@ -299,7 +293,7 @@ export const get0xPrice = async ({
 			};
 		}
 
-		const data = await response.json();
+		const data = (await response.json()) as ZeroXPriceResponse;
 		return {
 			status: "ok",
 			data: data,

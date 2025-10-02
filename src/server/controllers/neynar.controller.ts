@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import type { Address } from "viem";
 import { getGroupsTrackingUserByFarcasterFid } from "../../lib/db/queries/tracking.query.js";
 import { env } from "../../lib/env.js";
 import { createXmtpAgent } from "../../lib/xmtp/agent.js";
@@ -64,6 +65,7 @@ export const handleCopyTrade = async (req: Request, res: Response) => {
 		const action = getXmtpCopyTradeAction({
 			actionMessage,
 			transaction,
+			agentAddress: agentAddress as Address,
 		});
 
 		// iterate over groups and send copy trade message
@@ -85,6 +87,9 @@ export const handleCopyTrade = async (req: Request, res: Response) => {
 			await conversation.send(action, ContentTypeActions);
 			await conversation.send(
 				`See more details here ${env.APP_URL}/t/${transaction.transactionHash}`,
+			);
+			console.log(
+				`Copy trade action sent to the group chat ${conversation.id}`,
 			);
 		}
 

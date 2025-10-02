@@ -69,14 +69,6 @@ export function swapERC20(data: {
 	sellAmount: number; // amount in token base units to sell
 	sellAmountInDecimals: bigint; // amount in token base units to sell
 }): WalletSendCallsParams {
-	console.log(
-		"swapERC20 params",
-		JSON.stringify({
-			...data,
-			sellAmount: data.sellAmount.toString(),
-			sellAmountInDecimals: data.sellAmountInDecimals.toString(),
-		}),
-	);
 	const calls: WalletSendCallsParams["calls"] = [];
 
 	// if needed, add approve call for the 0x swap api

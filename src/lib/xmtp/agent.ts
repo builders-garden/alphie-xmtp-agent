@@ -9,6 +9,7 @@ import type { Reply } from "@xmtp/content-type-reply";
 import { ReplyCodec } from "@xmtp/content-type-reply";
 import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
 import { WalletSendCallsCodec } from "@xmtp/content-type-wallet-send-calls";
+import { ContentType, SortDirection } from "@xmtp/node-bindings";
 import type {
 	ActionsContent,
 	GroupUpdatedMessage,
@@ -154,12 +155,18 @@ export const handleXmtpMessage = async (
 				// get conversation history
 				const xmtpMessages = await ctx.conversation.messages({
 					limit: 100,
+					direction: SortDirection.Descending,
+					contentTypes: [ContentType.Text],
 				});
+
+				const xmtpMembers = await ctx.conversation.members();
 
 				const answer = await aiGenerateAnswer({
 					message: messageContent,
 					xmtpContext: ctx,
 					xmtpMessages,
+					xmtpMembers,
+					agentAddress,
 				});
 				if (answer) {
 					await ctx.sendText(answer);

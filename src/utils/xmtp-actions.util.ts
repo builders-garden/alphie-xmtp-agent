@@ -64,9 +64,11 @@ export const getXmtpActions = () => {
 export const getXmtpCopyTradeAction = ({
 	actionMessage,
 	transaction,
+	agentAddress,
 }: {
 	actionMessage: string;
 	transaction: HandleCopyTradeSchema["transaction"];
+	agentAddress: Address;
 }) => {
 	const action = buildCopyTradeAction({
 		message: actionMessage,
@@ -96,26 +98,10 @@ export const getXmtpCopyTradeAction = ({
 				}),
 				getEstimatedGasFee({ chainId: transaction.chainId }),
 			]);
-			console.log(
-				"copy trade action",
-				JSON.stringify({
-					senderAddress,
-					tokenBalance,
-					ethBalance,
-					gasEstimate,
-				}),
-			);
 			let sellAmount = Number.parseFloat(transaction.sellAmount);
 			let sellAmountInDecimals = parseUnits(
 				transaction.sellAmount,
 				tokenBalance.tokenDecimals,
-			);
-			console.log(
-				"sellAmount",
-				JSON.stringify({
-					sellAmount,
-					sellAmountInDecimals: sellAmountInDecimals.toString(),
-				}),
 			);
 
 			// user eth balance is lower than the gas estimate
@@ -126,9 +112,17 @@ export const getXmtpCopyTradeAction = ({
 				BigInt(tokenBalance.balanceRaw) >= sellAmountInDecimals;
 			const hasSomeToken =
 				BigInt(tokenBalance.balanceRaw) >= BigInt(MIN_0X_SWAP_AMOUNT);
+
 			console.log(
-				"check balances",
+				"copy trade action",
 				JSON.stringify({
+					transaction,
+					senderAddress,
+					tokenBalance,
+					ethBalance,
+					gasEstimate,
+					sellAmount,
+					sellAmountInDecimals: sellAmountInDecimals.toString(),
 					hasEnoughEth,
 					hasEnoughToken,
 					hasSomeToken,
@@ -163,9 +157,10 @@ export const getXmtpCopyTradeAction = ({
 				...transaction,
 				sellAmountInDecimals: sellAmountInDecimals.toString(),
 				taker: senderAddress as Address,
+				agentAddress: agentAddress,
 			});
 			if (quote.status === "nok") {
-				console.error("❌ Unable to get quote");
+				console.error("❌ Unable to get quote", quote.error);
 				await ctx.sendText("❌ Unable to get quote");
 				return;
 			}
