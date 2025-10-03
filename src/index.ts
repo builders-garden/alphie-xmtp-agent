@@ -1,13 +1,18 @@
+import type { Group } from "@xmtp/agent-sdk";
 import { logDetails } from "@xmtp/agent-sdk/debug";
 import cookieParserMiddleware from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import basicAuth from "express-basic-auth";
 import helmet from "helmet";
 import morganLogger from "morgan";
 import { base } from "viem/chains";
+import { WELCOME_MESSAGE } from "./lib/constants.js";
+import { getOrCreateGroupByConversationId } from "./lib/db/queries/index.js";
 import { env } from "./lib/env.js";
 import { createXmtpAgent, handleXmtpMessage } from "./lib/xmtp/agent.js";
 import { inlineActionsMiddleware } from "./lib/xmtp/middlewares.js";
+import { getBullboardRouter } from "./server/bullboard/dashboard.js";
 import { validateApiSecret } from "./server/middleware/auth.middleware.js";
 import {
 	handleError,
@@ -15,8 +20,12 @@ import {
 } from "./server/middleware/error.middleware.js";
 import responseMiddleware from "./server/middleware/response.js";
 import neynarRoutes from "./server/routes/neynar.route.js";
+import { ContentTypeActions } from "./types/index.js";
+import { getXmtpActions, registerXmtpActions } from "./utils/index.js";
 
-import { registerXmtpActions } from "./utils/index.js";
+// Import Bull jobs and workers to process jobs
+import "./server/bullboard/jobs/index.js";
+import "./server/bullboard/workers/index.js";
 
 async function main() {
 	const app = express();
@@ -36,6 +45,21 @@ async function main() {
 	app.use(helmet());
 	app.use(morganLogger("dev"));
 	app.use(responseMiddleware);
+
+	// Interact with BullMQ queues
+	if (env.NODE_ENV === "development" && !!env.ENABLE_BULLBOARD) {
+		app.use(
+			"/admin/queues",
+			basicAuth({
+				users: {
+					admin: env.BULLBOARD_PASSWORD,
+				},
+				challenge: true,
+				unauthorizedResponse: "Unauthorized",
+			}),
+			getBullboardRouter("/admin/queues"),
+		);
+	}
 
 	app.get("/", (_req, res) => {
 		res.json({ status: "ok" });
@@ -71,11 +95,22 @@ async function main() {
 	});
 
 	xmtpAgent.on("group", async (ctx) => {
-		console.log(`Group received: ${JSON.stringify(ctx)}`);
-	});
-
-	xmtpAgent.on("group-update", async (ctx) => {
-		console.log(`Group update received: ${JSON.stringify(ctx)}`);
+		console.log("Group received event");
+		console.log("Group received event", JSON.stringify(ctx.conversation));
+		const conversationId = ctx.conversation.id;
+		const { group, isNew } = await getOrCreateGroupByConversationId(
+			conversationId,
+			ctx.conversation as Group,
+			agentAddress,
+			ctx.client.inboxId,
+		);
+		if (isNew) {
+			// If is new group, send welcome message and actions
+			console.log("Sending welcome message to new group", group.id);
+			await ctx.conversation.send(WELCOME_MESSAGE);
+			const actions = getXmtpActions();
+			await ctx.conversation.send(actions, ContentTypeActions);
+		}
 	});
 
 	xmtpAgent.on("unknownMessage", async (ctx) => {

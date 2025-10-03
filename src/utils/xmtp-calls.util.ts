@@ -6,6 +6,7 @@ import {
 	type Hex,
 	toHex,
 } from "viem";
+import { base } from "viem/chains";
 import { XMTP_NETWORKS } from "../lib/constants.js";
 import { env } from "../lib/env.js";
 
@@ -56,6 +57,12 @@ export function swapERC20(data: {
 		title: "Alphie XMTP Agent",
 	};
 
+	const coinbasePaymasterUrl = `https://api.developer.coinbase.com/rpc/v1/base/${env.COINBASE_CDP_CLIENT_API_KEY}`;
+	const pimlicoPaymasterUrl = `https://api.pimlico.io/v2/${data.chainId}/rpc?apikey=${env.PIMLICO_API_KEY}`;
+	// if using base, use coinbase paymaster, otherwise use pimlico paymaster
+	const paymasterUrl =
+		data.chainId === base.id ? coinbasePaymasterUrl : pimlicoPaymasterUrl;
+
 	// handle calls
 	const calls: WalletSendCallsParams["calls"] = [];
 	// if needed, add approve call for the 0x swap api
@@ -95,8 +102,7 @@ export function swapERC20(data: {
 		chainId: toHex(data.chainId),
 		capabilities: {
 			paymasterService: {
-				url: `https://api.pimlico.io/v2/${data.chainId}/rpc?apikey=${env.PIMLICO_API_KEY}`,
-				optional: false,
+				url: paymasterUrl,
 			},
 		},
 		calls,

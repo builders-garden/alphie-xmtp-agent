@@ -27,12 +27,8 @@ import {
 	shouldRespondToMessage,
 	shouldSendHelpHint,
 } from "../../utils/message.util.js";
-import { aiGenerateAnswer } from "../ai-sdk.js";
-import {
-	DM_RESPONSE_MESSAGE,
-	HELP_HINT_MESSAGE,
-	WELCOME_MESSAGE,
-} from "../constants.js";
+import { aiGenerateAnswer } from "../ai-sdk/index.js";
+import { DM_RESPONSE_MESSAGE, HELP_HINT_MESSAGE } from "../constants.js";
 import { getOrCreateGroupByConversationId } from "../db/queries/index.js";
 import { env } from "../env.js";
 
@@ -127,12 +123,8 @@ export const handleXmtpMessage = async (
 				});
 			}
 
-			// If is new group, send welcome message and actions
 			if (isNew) {
-				console.log("Sending welcome message to new group");
-				await ctx.sendText(WELCOME_MESSAGE);
-				const actions = getXmtpActions();
-				await sendActions(ctx, actions);
+				// welcome message already handled in the "group" event listener
 			}
 
 			// Handle reply to the agent
@@ -161,6 +153,7 @@ export const handleXmtpMessage = async (
 
 				const xmtpMembers = await ctx.conversation.members();
 
+				// generate answer with tools
 				const answer = await aiGenerateAnswer({
 					message: messageContent,
 					xmtpContext: ctx,

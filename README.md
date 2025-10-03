@@ -61,3 +61,44 @@ or use the bash script:
 ```bash
 bash tests/test-webhook.sh
 ```
+
+## Technical Requirements
+
+- Node.js (v20 or higher)
+- pnpm (as package manager)
+- Turso SQLite (for database)
+- Redis (for BullMQ job queues)
+- Ethereum Private Key (for XMTP agent)
+- OpenAI API Key (for AI processing)
+- Neynar API Key (for neynar webhook events)
+- 0x API Key (for https://0x.org swap api)
+- Pimlico API Key (for Pimlico paymaster)
+
+### BullMQ Queue Configuration
+
+The video processing system uses BullMQ for reliable background job processing with the following features:
+
+### Queue Settings
+
+- **Concurrency**: 2 simultaneous jobs per worker type
+- **Rate Limiting**: Maximum 10 jobs per minute per queue
+- **Retry Policy**: 3 attempts with exponential backoff (2 second initial delay)
+- **Job Retention**:
+  - Completed jobs: Keep last 50 or 24 hours
+  - Failed jobs: Keep last 50 or 7 days
+
+### Available Queues
+
+1. **neynar-queue**: Processes neynar webhook events
+
+
+### BullBoard Dashboard
+
+In development mode, you can monitor queue status at `/admin/queues` (requires basic auth).
+
+Enable it by setting environment variables:
+
+```bash
+ENABLE_BULLBOARD="true"
+BULLBOARD_PASSWORD="your-secure-password"
+```

@@ -14,6 +14,10 @@ const envSchema = z.object({
 		})
 		.optional()
 		.default("3001"),
+	NODE_ENV: z
+		.enum(["development", "production"])
+		.optional()
+		.default("production"),
 
 	// Api secret key
 	API_SECRET_KEY: z.string().min(1),
@@ -42,8 +46,19 @@ const envSchema = z.object({
 	// 0x api key
 	ZEROX_API_KEY: z.string().min(1),
 
+	// Coinbase Developer Platform Client Api Key, get yours at https://portal.cdp.coinbase.com
+	COINBASE_CDP_CLIENT_API_KEY: z.string().min(1),
 	// Pimlico API KEY, get yours at https://dashboard.pimlico.io
 	PIMLICO_API_KEY: z.string().min(1),
+
+	// BullMQ
+	REDIS_URL: z.string().min(1),
+	BULLBOARD_PASSWORD: z.string().min(1),
+	ENABLE_BULLBOARD: z
+		.string()
+		.refine((s) => s === "true" || s === "false")
+		.default("false")
+		.transform((s) => s === "true"),
 });
 
 export type Env = z.infer<typeof envSchema>;
