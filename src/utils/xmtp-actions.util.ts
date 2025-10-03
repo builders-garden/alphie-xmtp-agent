@@ -25,11 +25,17 @@ import {
  * @param erc20Handler - The ERC20 handler
  */
 export const registerXmtpActions = () => {
+	registerAction("start-tracking", async (ctx) => {
+		await ctx.sendText(
+			"🔍 Tag me (@alphie.base.eth) and tell me the farcaster username or FID of the user you want to track\n\nExamples:\nHey @alphie.base.eth start tracking user with fid 3",
+		);
+	});
+
 	registerAction("open-app", async (ctx) => {
 		const senderAddress = await ctx.getSenderAddress();
 		if (!senderAddress) return;
 
-		await ctx.sendText(`💸  app in your wallet! ${env.APP_URL}`);
+		await ctx.sendText(`💸 explore group stats on the app ${env.APP_URL}`);
 	});
 
 	registerAction("leaderboard", async (ctx) => {
@@ -49,8 +55,9 @@ export const registerXmtpActions = () => {
  */
 export const getXmtpActions = () => {
 	return ActionBuilder.create("help", ACTIONS_MESSAGE)
+		.add({ id: "start-tracking", label: "🔍 Start Tracking" })
 		.add({ id: "leaderboard", label: "🏆 Leaderboard" })
-		.add({ id: "open-app", label: "😉 Open App" })
+		.add({ id: "open-app", label: "🦊 Open App" })
 		.add({ id: "help", label: "💬 Help" })
 		.build();
 };

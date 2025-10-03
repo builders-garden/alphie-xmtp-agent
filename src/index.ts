@@ -11,7 +11,10 @@ import { WELCOME_MESSAGE } from "./lib/constants.js";
 import { getOrCreateGroupByConversationId } from "./lib/db/queries/index.js";
 import { env } from "./lib/env.js";
 import { createXmtpAgent, handleXmtpMessage } from "./lib/xmtp/agent.js";
-import { inlineActionsMiddleware } from "./lib/xmtp/middlewares.js";
+import {
+	eyesReactionMiddleware,
+	inlineActionsMiddleware,
+} from "./lib/xmtp/middlewares.js";
 import { getBullboardRouter } from "./server/bullboard/dashboard.js";
 import { validateApiSecret } from "./server/middleware/auth.middleware.js";
 import {
@@ -87,7 +90,7 @@ async function main() {
 	registerXmtpActions();
 
 	// XMTP Agent middlewares
-	xmtpAgent.use(inlineActionsMiddleware);
+	xmtpAgent.use(inlineActionsMiddleware, eyesReactionMiddleware);
 
 	xmtpAgent.on("message", async (ctx) => {
 		console.log(`Message received: ${JSON.stringify(ctx.message.content)}`);
@@ -130,7 +133,7 @@ async function main() {
 	await xmtpAgent.start();
 
 	app.listen(port, () => {
-		console.log(`🚀 Webhook Server is running at http://localhost:${port}`);
+		console.log(`🚀 Express.js server is running at http://localhost:${port}`);
 	});
 }
 

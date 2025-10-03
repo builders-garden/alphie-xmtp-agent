@@ -23,3 +23,10 @@ export interface GroupUpdatedMessage {
 export interface InlineActionsContext extends MessageContext {
 	metadata?: Record<string, unknown>;
 }
+
+export interface ThinkingReactionContext extends MessageContext {
+	helpers: {
+		addThinkingEmoji: () => Promise<void>;
+		removeThinkingEmoji: () => Promise<void>;
+	};
+}

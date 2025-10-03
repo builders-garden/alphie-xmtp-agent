@@ -1,4 +1,9 @@
-import { Agent, filter, type MessageContext } from "@xmtp/agent-sdk";
+import {
+	Agent,
+	type DecodedMessage,
+	filter,
+	type MessageContext,
+} from "@xmtp/agent-sdk";
 import type { GroupUpdated } from "@xmtp/content-type-group-updated";
 import { GroupUpdatedCodec } from "@xmtp/content-type-group-updated";
 import type { Reaction } from "@xmtp/content-type-reaction";
@@ -14,6 +19,7 @@ import type {
 	ActionsContent,
 	GroupUpdatedMessage,
 	IntentContent,
+	ThinkingReactionContext,
 } from "../../types/index.js";
 import { ActionsCodec, IntentCodec } from "../../types/index.js";
 import {
@@ -77,6 +83,8 @@ export const handleXmtpMessage = async (
 	agentAddress: string,
 ) => {
 	try {
+		const thinkingContext = ctx as ThinkingReactionContext;
+
 		// skip if message has no content or is from the agent or its a reaction
 		if (
 			!filter.hasContent(ctx.message) ||
@@ -137,19 +145,27 @@ export const handleXmtpMessage = async (
 			});
 			console.log("Should respond:", shouldRespond);
 			if (shouldRespond) {
+				await thinkingContext.helpers.addThinkingEmoji();
 				if (isSendHelpHint) {
-					await ctx.sendText(HELP_HINT_MESSAGE);
+					await ctx.sendTextReply(HELP_HINT_MESSAGE);
 					const actions = getXmtpActions();
 					await sendActions(ctx, actions);
 					return;
 				}
 
-				// get conversation history
-				const xmtpMessages = await ctx.conversation.messages({
-					limit: 100,
+				let xmtpMessages: DecodedMessage[] = await ctx.conversation.messages({
+					limit: 20,
 					direction: SortDirection.Descending,
 					contentTypes: [ContentType.Text],
 				});
+				// get only the reply message in context for the ai
+				if (ctx.isReply()) {
+					const replyMessage = ctx.message.content;
+					console.log("reply message", replyMessage);
+					xmtpMessages = xmtpMessages.filter(
+						(m) => m.id === replyMessage.reference,
+					);
+				}
 
 				const xmtpMembers = await ctx.conversation.members();
 
@@ -162,7 +178,7 @@ export const handleXmtpMessage = async (
 					agentAddress,
 				});
 				if (answer) {
-					await ctx.sendText(answer);
+					await ctx.sendTextReply(answer);
 				}
 			}
 		}
