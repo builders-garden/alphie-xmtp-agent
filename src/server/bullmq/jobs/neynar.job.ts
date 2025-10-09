@@ -2,21 +2,22 @@ import type { Job } from "bullmq";
 import type { Address } from "viem";
 import { getGroupsTrackingUserByFarcasterFid } from "../../../lib/db/queries/index.js";
 import { env } from "../../../lib/env.js";
+import { fetchUserFromNeynarByFid } from "../../../lib/neynar.js";
 import { createXmtpAgent } from "../../../lib/xmtp/agent.js";
 import {
 	ContentTypeActions,
+	type JobResult,
 	type NeynarWebhookJobData,
-	type NeynarWebhookJobResult,
 } from "../../../types/index.js";
 import { getTokenInfo, getXmtpCopyTradeAction } from "../../../utils/index.js";
 
 /**
- * Process image-to-video job - combines image and audio into HLS video format
+ * Process neynar webhook - handle copy trade for any farcaster user
  * @param job - The BullMQ job containing the processing request
  */
 export const processNeynarWebhookJob = async (
 	job: Job<NeynarWebhookJobData>,
-): Promise<NeynarWebhookJobResult> => {
+): Promise<JobResult> => {
 	const { user, transaction } = job.data;
 	let progress = 5;
 
@@ -26,6 +27,15 @@ export const processNeynarWebhookJob = async (
 	await job.updateProgress(progress);
 
 	try {
+		const neynarUser = await fetchUserFromNeynarByFid(user.fid);
+		if (!neynarUser) {
+			console.error("❌ Unable to get neynar user");
+			return {
+				status: "failed",
+				error: "Unable to get neynar user",
+			};
+		}
+
 		// get groups that are tracking the user
 		const groups = await getGroupsTrackingUserByFarcasterFid(user.fid);
 		if (groups.length === 0) {
@@ -59,7 +69,8 @@ export const processNeynarWebhookJob = async (
 			chainId: transaction.chainId,
 		});
 		const sellAmount = Number.parseFloat(transaction.sellAmount).toFixed(2);
-		const actionMessage = `Copy trade @${user.username}: Swap ${sellAmount} ${token.sellSymbol} for ${token.buySymbol}`;
+
+		const actionMessage = `Copy trade @${neynarUser.username}: Swap ${sellAmount} ${token.sellSymbol} for ${token.buySymbol}`;
 		const action = getXmtpCopyTradeAction({
 			actionMessage,
 			transaction,

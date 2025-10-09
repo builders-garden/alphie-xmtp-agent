@@ -3,7 +3,11 @@ import type { HandleCopyTradeSchema } from "./server.type.js";
 
 export enum QUEUES {
 	NEYNAR_WEBHOOK_QUEUE = "neynar-webhook-queue",
-	MESSAGE_QUEUE = "message-queue",
+	ADD_USERS_QUEUE = "add-users-queue",
+}
+
+export interface AddUsersJobData {
+	users: { fid: number; userId: string; groupId?: string }[];
 }
 
 export interface NeynarWebhookJobData {
@@ -11,57 +15,55 @@ export interface NeynarWebhookJobData {
 	transaction: HandleCopyTradeSchema["transaction"];
 }
 
-const neynarWebhookJobResultSuccessSchema = z.object({
+const jobResultSuccessSchema = z.object({
 	status: z.literal("success"),
 	message: z.string(),
 });
 
-const neynarWebhookJobResultFailedSchema = z.object({
+const jobResultFailedSchema = z.object({
 	status: z.literal("failed"),
 	error: z.string(),
 });
 
-export const neynarWebhookJobResultSchema = z.union([
-	neynarWebhookJobResultSuccessSchema,
-	neynarWebhookJobResultFailedSchema,
+export const jobResultSchema = z.union([
+	jobResultSuccessSchema,
+	jobResultFailedSchema,
 ]);
 
-export type NeynarWebhookJobResult = z.infer<
-	typeof neynarWebhookJobResultSchema
->;
+export type JobResult = z.infer<typeof jobResultSchema>;
 
-const neynarWebhookJobProgressPendingSchema = z.object({
+const jobProgressPendingSchema = z.object({
 	status: z.literal("pending"),
 	progress: z.number(),
 });
 
-const neynarWebhookJobProgressActiveSchema = z.object({
+const jobProgressActiveSchema = z.object({
 	status: z.literal("active"),
 	progress: z.number(),
 	createdAt: z.date(),
 	updatedAt: z.date(),
 });
 
-const neynarWebhookJobProgressCompletedSchema = z.object({
+const jobProgressCompletedSchema = z.object({
 	status: z.literal("completed"),
 	progress: z.number(),
-	result: neynarWebhookJobResultSchema,
+	result: jobResultSchema,
 	createdAt: z.date(),
 	updatedAt: z.date(),
 });
 
-const neynarWebhookJobProgressFailedSchema = z.object({
+const jobProgressFailedSchema = z.object({
 	status: z.literal("failed"),
 	progress: z.number(),
 	error: z.string(),
-	result: neynarWebhookJobResultSchema,
+	result: jobResultSchema,
 	attemptsMade: z.number(),
 	attemptsRemaining: z.number(),
 	createdAt: z.date(),
 	updatedAt: z.date(),
 });
 
-const neynarWebhookJobProgressDelayedSchema = z.object({
+const jobProgressDelayedSchema = z.object({
 	status: z.literal("delayed"),
 	progress: z.number(),
 	delayReason: z.string(),
@@ -70,7 +72,7 @@ const neynarWebhookJobProgressDelayedSchema = z.object({
 	updatedAt: z.date(),
 });
 
-const neynarWebhookJobProgressWaitingSchema = z.object({
+const jobProgressWaitingSchema = z.object({
 	status: z.literal("waiting"),
 	progress: z.number(),
 	position: z.number(),
@@ -78,15 +80,13 @@ const neynarWebhookJobProgressWaitingSchema = z.object({
 	updatedAt: z.date(),
 });
 
-export const neynarWebhookJobProgressSchema = z.union([
-	neynarWebhookJobProgressPendingSchema,
-	neynarWebhookJobProgressActiveSchema,
-	neynarWebhookJobProgressCompletedSchema,
-	neynarWebhookJobProgressFailedSchema,
-	neynarWebhookJobProgressDelayedSchema,
-	neynarWebhookJobProgressWaitingSchema,
+export const jobProgressSchema = z.union([
+	jobProgressPendingSchema,
+	jobProgressActiveSchema,
+	jobProgressCompletedSchema,
+	jobProgressFailedSchema,
+	jobProgressDelayedSchema,
+	jobProgressWaitingSchema,
 ]);
 
-export type NeynarWebhookJobProgress = z.infer<
-	typeof neynarWebhookJobProgressSchema
->;
+export type JobProgress = z.infer<typeof jobProgressSchema>;

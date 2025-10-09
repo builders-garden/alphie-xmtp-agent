@@ -1,5 +1,5 @@
 import { and, countDistinct, eq, inArray } from "drizzle-orm";
-import { groupTrackedUserTable } from "../db.schema.js";
+import { farcaster, groupTrackedUser } from "../db.schema.js";
 import { db } from "../index.js";
 import { getGroupByConversationId } from "./group.query.js";
 import { getUserByFarcasterFid, getUserByInboxId } from "./user.query.js";
@@ -17,10 +17,7 @@ export const addUsersToGroupTrackings = async (
 		addedByUserId?: string;
 	}[],
 ) => {
-	return await db
-		.insert(groupTrackedUserTable)
-		.values(rows)
-		.onConflictDoNothing();
+	return await db.insert(groupTrackedUser).values(rows).onConflictDoNothing();
 };
 
 /**
@@ -65,25 +62,6 @@ export const addUserToGroupTrackingByFid = async ({
 };
 
 /**
- * Remove tracked user from group
- * @param groupId - The group id
- * @param userId - The user id
- */
-export const removeTrackedUserFromGroup = async (
-	groupId: string,
-	userId: string,
-) => {
-	return await db
-		.delete(groupTrackedUserTable)
-		.where(
-			and(
-				eq(groupTrackedUserTable.groupId, groupId),
-				eq(groupTrackedUserTable.userId, userId),
-			),
-		);
-};
-
-/**
  * Remove users from group trackings
  * @param groupId - The group id
  * @param userIds - The user ids
@@ -93,11 +71,11 @@ export const removeUsersFromGroupTrackings = async (
 	userIds: string[],
 ) => {
 	return await db
-		.delete(groupTrackedUserTable)
+		.delete(groupTrackedUser)
 		.where(
 			and(
-				eq(groupTrackedUserTable.groupId, groupId),
-				inArray(groupTrackedUserTable.userId, userIds),
+				eq(groupTrackedUser.groupId, groupId),
+				inArray(groupTrackedUser.userId, userIds),
 			),
 		);
 };
@@ -111,9 +89,9 @@ export const countGroupsTrackingUserByFarcasterFid = async (fid: number) => {
 	const user = await getUserByFarcasterFid(fid);
 	if (!user) return 0;
 	const rows = await db
-		.select({ cnt: countDistinct(groupTrackedUserTable.groupId) })
-		.from(groupTrackedUserTable)
-		.where(eq(groupTrackedUserTable.userId, user.id));
+		.select({ cnt: countDistinct(groupTrackedUser.groupId) })
+		.from(groupTrackedUser)
+		.where(eq(groupTrackedUser.userId, user.id));
 	return rows[0]?.cnt ?? 0;
 };
 
@@ -124,8 +102,8 @@ export const countGroupsTrackingUserByFarcasterFid = async (fid: number) => {
  */
 export const getGroupsTrackingUserByUserId = async (userId: string) => {
 	if (!userId) return [];
-	const data = await db.query.groupTrackedUserTable.findMany({
-		where: eq(groupTrackedUserTable.userId, userId),
+	const data = await db.query.groupTrackedUser.findMany({
+		where: eq(groupTrackedUser.userId, userId),
 		with: {
 			group: true,
 		},
@@ -143,4 +121,44 @@ export const getGroupsTrackingUserByFarcasterFid = async (fid: number) => {
 	const user = await getUserByFarcasterFid(fid);
 	if (!user) return [];
 	return getGroupsTrackingUserByUserId(user.id);
+};
+
+/**
+ * Get distinct tracked users
+ * @returns The distinct tracked users
+ */
+export const getDistinctTrackedUsers = async (): Promise<
+	{
+		userId: string;
+		webhookId: number | null;
+		groupId: string | null;
+		fid: number;
+		username: string;
+	}[]
+> => {
+	try {
+		const users = await db
+			.selectDistinct({
+				userId: groupTrackedUser.userId,
+				groupId: groupTrackedUser.groupId,
+				webhookId: groupTrackedUser.neynarWebhookId,
+				fid: farcaster.fid,
+				username: farcaster.username,
+			})
+			.from(groupTrackedUser)
+			.leftJoin(farcaster, eq(groupTrackedUser.userId, farcaster.userId));
+		const retUsers = users
+			.filter((u) => u.fid !== null)
+			.map((u) => ({
+				userId: u.userId,
+				groupId: u.groupId,
+				webhookId: u.webhookId,
+				fid: u.fid ?? -1,
+				username: u.username ?? "",
+			}));
+		return retUsers;
+	} catch (error) {
+		console.error("Error getting distinct tracked users:", error);
+		return [];
+	}
 };

@@ -1,16 +1,13 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "../../../lib/redis.js";
 import {
+	type JobResult,
 	type NeynarWebhookJobData,
-	type NeynarWebhookJobResult,
 	QUEUES,
 } from "../../../types/index.js";
 import { processNeynarWebhookJob } from "../jobs/neynar.job.js";
 
-export const neynarWebhookWorker = new Worker<
-	NeynarWebhookJobData,
-	NeynarWebhookJobResult
->(
+export const neynarWebhookWorker = new Worker<NeynarWebhookJobData, JobResult>(
 	QUEUES.NEYNAR_WEBHOOK_QUEUE,
 	async (job) => {
 		try {

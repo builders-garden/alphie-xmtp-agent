@@ -4,7 +4,6 @@ import { z } from "zod";
 export const handleCopyTradeSchema = z.object({
 	user: z.object({
 		fid: z.number(),
-		username: z.string(),
 	}),
 	transaction: z.object({
 		chainId: z.number(),

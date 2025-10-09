@@ -5,7 +5,7 @@ import * as dbSchema from "./db.schema.js";
 
 export const tursoClient = createClient({
 	url: env.DATABASE_URL,
-	authToken: env.DATABASE_AUTH_TOKEN,
+	authToken: env.DATABASE_TOKEN,
 });
 
 export const db = drizzle(tursoClient, {

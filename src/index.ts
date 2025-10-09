@@ -15,8 +15,7 @@ import {
 	eyesReactionMiddleware,
 	inlineActionsMiddleware,
 } from "./lib/xmtp/middlewares.js";
-import { getBullboardRouter } from "./server/bullboard/dashboard.js";
-import { validateApiSecret } from "./server/middleware/auth.middleware.js";
+import { getBullboardRouter } from "./server/bullmq/dashboard.js";
 import {
 	handleError,
 	handleNotFound,
@@ -27,8 +26,8 @@ import { ContentTypeActions } from "./types/index.js";
 import { getXmtpActions, registerXmtpActions } from "./utils/index.js";
 
 // Import Bull jobs and workers to process jobs
-import "./server/bullboard/jobs/index.js";
-import "./server/bullboard/workers/index.js";
+import "./server/bullmq/jobs/index.js";
+import "./server/bullmq/workers/index.js";
 
 async function main() {
 	const app = express();
@@ -68,7 +67,7 @@ async function main() {
 		res.json({ status: "ok" });
 	});
 
-	app.use("/api/v1/", validateApiSecret, neynarRoutes);
+	app.use("/api/v1/neynar", neynarRoutes);
 
 	// Use custom middlewares for handling 404 and errors
 	app.use(handleNotFound);

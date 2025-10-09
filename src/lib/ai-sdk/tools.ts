@@ -23,7 +23,11 @@ export const tools = {
 				.describe("The Farcaster FID of the person to track"),
 		}),
 		execute: async ({ farcasterFid, farcasterUsername }) => {
-			console.log("track this farcaster user", farcasterFid, farcasterUsername);
+			console.log(
+				"[ai-sdk] [track-tool] track this farcaster user",
+				farcasterFid,
+				farcasterUsername,
+			);
 			let user: NeynarUser | null = null;
 			if (farcasterFid) {
 				user = await fetchUserFromNeynarByFid(farcasterFid);
@@ -42,14 +46,16 @@ export const tools = {
 				};
 			}
 			// create user from neynar
-			await getOrCreateUserByFarcasterFid(user);
+			const newUser = await getOrCreateUserByFarcasterFid(user);
+			console.log("[ai-sdk] [track-tool] user saved in db", newUser.id);
 
 			return {
 				farcasterUser: {
 					fid: user.fid,
 					username: user.username,
+					userId: newUser.id,
 				},
-				text: `Confirm that you want to track this farcaster user https://farcaster.xyz/${user.username} (${user.fid})`,
+				text: `Confirm that you want to track this farcaster user https://farcaster.xyz/${user.username} (fid ${user.fid})`,
 			};
 		},
 	}),

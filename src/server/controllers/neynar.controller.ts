@@ -1,13 +1,15 @@
 import type { Job } from "bullmq";
 import type { Request, Response } from "express";
 import { ulid } from "ulid";
-import {
-	handleCopyTradeSchema,
-	type NeynarWebhookJobData,
-	type NeynarWebhookJobProgress,
-	type NeynarWebhookJobResult,
+import type { Address, Hex } from "viem";
+import type {
+	JobProgress,
+	JobResult,
+	NeynarWebhookJobData,
 } from "../../types/index.js";
-import { neynarWebhookQueue } from "../bullboard/queues/neynar.queue.js";
+import { tradeWebhookPayloadSchema } from "../../types/neynar.type.js";
+import { getChainByName } from "../../utils/viem.util.js";
+import { neynarWebhookQueue } from "../bullmq/queues/neynar.queue.js";
 
 /**
  * Handle copy trade controller
@@ -15,9 +17,9 @@ import { neynarWebhookQueue } from "../bullboard/queues/neynar.queue.js";
  * @param res - The response object
  * @returns void
  */
-export const handleCopyTrade = async (req: Request, res: Response) => {
+export const handleWebhookEvent = async (req: Request, res: Response) => {
 	try {
-		const parseBody = handleCopyTradeSchema.safeParse(req.body);
+		const parseBody = tradeWebhookPayloadSchema.safeParse(req.body);
 		if (!parseBody.success) {
 			console.error("Invalid request body", parseBody.error.message);
 			res.status(400).json({
@@ -27,15 +29,34 @@ export const handleCopyTrade = async (req: Request, res: Response) => {
 			return;
 		}
 
-		const { user, transaction } = parseBody.data;
+		const { trader, transaction } = parseBody.data.data;
 		const jobId = ulid();
+		if (!trader) {
+			res.status(200).json({
+				status: "success",
+				message: "Trader is required to continue",
+			});
+			return;
+		}
 
 		// Add job to queue
+		const chain = getChainByName(transaction.network.name);
 		const job = await neynarWebhookQueue.add(
 			"process-neynar-webhook",
 			{
-				user,
-				transaction,
+				user: {
+					fid: trader.fid,
+				},
+				transaction: {
+					chainId: chain.id,
+					transactionHash: transaction.hash as Hex,
+					buyToken: transaction.net_transfer.receiving_token.token
+						.address as Address,
+					sellToken: transaction.net_transfer.sending_token.token
+						.address as Address,
+					sellAmount:
+						transaction.net_transfer.receiving_token.balance.in_token ?? "0",
+				},
 			},
 			{
 				jobId,
@@ -92,10 +113,10 @@ export const checkJobStatus = async (req: Request, res: Response) => {
 		const progress = job.progress;
 
 		// Build response based on job state
-		let response: NeynarWebhookJobProgress | null = null;
+		let response: JobProgress | null = null;
 
 		// Add additional info based on state
-		const result = job.returnvalue as NeynarWebhookJobResult;
+		const result = job.returnvalue as JobResult;
 		if (state === "completed") {
 			response = {
 				status: state,

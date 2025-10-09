@@ -7,6 +7,7 @@ const envSchema = z.object({
 	APP_URL: z.url().min(1),
 
 	// Server
+	BACKEND_URL: z.url().min(1),
 	PORT: z
 		.string()
 		.refine((val) => !Number.isNaN(Number(val)), {
@@ -35,10 +36,11 @@ const envSchema = z.object({
 
 	// Database
 	DATABASE_URL: z.string().min(1),
-	DATABASE_AUTH_TOKEN: z.string().min(1),
+	DATABASE_TOKEN: z.string().min(1),
 
 	// Neynar
 	NEYNAR_API_KEY: z.string().min(1),
+	NEYNAR_WEBHOOK_SECRET: z.string().min(1),
 
 	// OpenAI
 	OPENAI_API_KEY: z.string().min(1),

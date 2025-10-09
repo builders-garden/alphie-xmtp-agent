@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { env } from "../../lib/env.js";
+import { verifyNeynarSignature } from "../../lib/neynar.js";
 import { response } from "./response.js";
 
 export const validateApiSecret = (
@@ -7,11 +7,28 @@ export const validateApiSecret = (
 	_res: Response,
 	next: NextFunction,
 ): void | Promise<void> => {
-	const apiSecret = req.header("x-api-secret");
+	const signature = req.header("X-Neynar-Signature");
+	const body = req.body;
+	console.log("signature", signature);
+	console.log("body", body);
 
-	if (!apiSecret || apiSecret !== env.API_SECRET_KEY) {
+	if (!signature || !body) {
+		console.log("Unauthorized: Invalid or missing signature or body");
 		response.unauthorized({
-			message: "Unauthorized: Invalid or missing API secret key",
+			message: "Unauthorized: Invalid or missing signature or body",
+		});
+		return;
+	}
+
+	const isValid = verifyNeynarSignature({
+		signature,
+		body,
+	});
+
+	if (!isValid) {
+		console.log("Unauthorized: Invalid signature");
+		response.unauthorized({
+			message: "Unauthorized: Invalid signature",
 		});
 		return;
 	}

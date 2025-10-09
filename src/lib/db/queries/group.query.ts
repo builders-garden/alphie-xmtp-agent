@@ -4,12 +4,14 @@ import {
 	type Group as XmtpGroup,
 } from "@xmtp/agent-sdk";
 import { and, eq, inArray } from "drizzle-orm";
+import { ulid } from "ulid";
+import { addUsersToQueue } from "../../../utils/queue.util.js";
 import {
 	type CreateGroup,
 	type CreateGroupMember,
 	type Group,
-	groupMemberTable,
-	groupTable,
+	group,
+	groupMember,
 	type UpdateGroup,
 } from "../db.schema.js";
 import { db } from "../index.js";
@@ -29,8 +31,8 @@ import {
  * @returns The group
  */
 export const getGroupByConversationId = async (conversationId: string) => {
-	const group = await db.query.groupTable.findFirst({
-		where: eq(groupTable.conversationId, conversationId),
+	const newGroup = await db.query.group.findFirst({
+		where: eq(group.conversationId, conversationId),
 		with: {
 			members: {
 				with: {
@@ -39,33 +41,33 @@ export const getGroupByConversationId = async (conversationId: string) => {
 			},
 		},
 	});
-	return group;
-};
-
-/**
- * Create group
- * @param group - The group to create
- * @returns The created group
- */
-export const createGroup = async (group: CreateGroup) => {
-	const [newGroup] = await db.insert(groupTable).values(group).returning();
 	return newGroup;
 };
 
 /**
+ * Create group
+ * @param newGroup - The group to create
+ * @returns The created group
+ */
+export const createGroup = async (newGroup: CreateGroup) => {
+	const [createdGroup] = await db.insert(group).values(newGroup).returning();
+	return createdGroup;
+};
+
+/**
  * Update group
- * @param group - The group to update
+ * @param newGroup - The group to update
  * @returns The updated group
  */
-export const updateGroup = async (group: UpdateGroup) => {
-	if (!group.id) {
-		console.error("Group ID is required for this group", group);
+export const updateGroup = async (newGroup: UpdateGroup) => {
+	if (!newGroup.id) {
+		console.error("Group ID is required for this group", newGroup);
 		throw new Error("Group ID is required");
 	}
 	const [updatedGroup] = await db
-		.update(groupTable)
-		.set(group)
-		.where(eq(groupTable.id, group.id))
+		.update(group)
+		.set(newGroup)
+		.where(eq(group.id, newGroup.id))
 		.returning();
 	return updatedGroup;
 };
@@ -75,7 +77,7 @@ export const updateGroup = async (group: UpdateGroup) => {
  * @param groupId - The group id
  */
 export const deleteGroupById = async (groupId: string) => {
-	return await db.delete(groupTable).where(eq(groupTable.id, groupId));
+	return await db.delete(group).where(eq(group.id, groupId));
 };
 
 /**
@@ -101,15 +103,23 @@ export const upsertGroupMembers = async (
 	const users = await getOrCreateUsersByInboxIds(data);
 
 	const rows: CreateGroupMember[] = users.map((u) => ({
+		id: ulid(),
 		groupId,
 		userId: u.id,
 	}));
 
 	// Insert ignoring duplicates via unique index (groupId,userId)
-	await db.insert(groupMemberTable).values(rows).onConflictDoNothing();
+	await db.insert(groupMember).values(rows).onConflictDoNothing();
 
-	// add users to group trackings
-	await addUsersToGroupTrackings(rows);
+	// add users to neynar webhook
+	const usersToAdd = users
+		.map((u) => ({
+			fid: u.farcaster?.fid ?? -1,
+			userId: u.id,
+			groupId,
+		}))
+		.filter((u) => u.fid > -1);
+	await addUsersToQueue(usersToAdd);
 };
 
 /**
@@ -127,14 +137,22 @@ export const addGroupMembersByInboxIds = async (
 		),
 	);
 	const rows: CreateGroupMember[] = users.map((u) => ({
+		id: ulid(),
 		groupId,
-		userId: u.id,
+		userId: u?.id ?? "",
 	}));
 	// Insert, ignoring duplicates
-	await db.insert(groupMemberTable).values(rows).onConflictDoNothing();
+	await db.insert(groupMember).values(rows).onConflictDoNothing();
 
-	// add users to group trackings
-	await addUsersToGroupTrackings(rows);
+	// TODO add users to neynar webhook
+	// const usersToAdd = users
+	// 	.map((u) => ({
+	// 		fid: u.farcaster?.fid ?? -1,
+	// 		userId: u.id,
+	// 		groupId,
+	// 	}))
+	// 	.filter((u) => u.fid > -1);
+	// await addUsersToQueue(usersToAdd);
 };
 
 /**
@@ -151,14 +169,15 @@ export const removeGroupMembersByInboxIds = async (
 
 	// remove members from group tracked users
 	await removeUsersFromGroupTrackings(groupId, userIds);
+	// TODO remove users from neynar webhook
 
 	// remove members from group members
 	await db
-		.delete(groupMemberTable)
+		.delete(groupMember)
 		.where(
 			and(
-				eq(groupMemberTable.groupId, groupId),
-				inArray(groupMemberTable.userId, userIds),
+				eq(groupMember.groupId, groupId),
+				inArray(groupMember.userId, userIds),
 			),
 		);
 };
@@ -178,6 +197,7 @@ export const getOrCreateGroupByConversationId = async (
 	const group = await getGroupByConversationId(conversationId);
 	if (!group) {
 		const newGroup = await createGroup({
+			id: ulid(),
 			conversationId,
 			name: xmtpGroup.name,
 			description: xmtpGroup.description,

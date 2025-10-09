@@ -1,5 +1,6 @@
 import type { User as NeynarUser } from "@neynar/nodejs-sdk/build/api/index.js";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { ulid } from "ulid";
 import type { Address } from "viem";
 import { formatAvatarSrc } from "../../../utils/index.js";
 import {
@@ -9,27 +10,25 @@ import {
 	getEnsName,
 } from "../../ens.js";
 import { fetchUserByAddress } from "../../neynar.js";
-import { type CreateUser, type User, userTable } from "../db.schema.js";
+import {
+	type CreateUser,
+	type Farcaster,
+	farcaster,
+	type User,
+	user,
+	walletAddress,
+} from "../db.schema.js";
 import { db } from "../index.js";
-
-/**
- * Get user by address
- */
-export const getUserByAddress = async (address: string) => {
-	const user = await db.query.userTable.findFirst({
-		where: eq(userTable.address, address),
-	});
-	return user;
-};
 
 /**
  * Get user by XMTP inboxId
  */
 export const getUserByInboxId = async (inboxId: string) => {
-	const user = await db.query.userTable.findFirst({
-		where: eq(userTable.inboxId, inboxId),
+	const row = await db.query.farcaster.findFirst({
+		where: eq(farcaster.inboxId, inboxId),
+		with: { user: true },
 	});
-	return user;
+	return row?.user ?? null;
 };
 
 /**
@@ -38,17 +37,18 @@ export const getUserByInboxId = async (inboxId: string) => {
  * @returns
  */
 export const getUserByFarcasterFid = async (farcasterFid: number) => {
-	const user = await db.query.userTable.findFirst({
-		where: eq(userTable.farcasterFid, farcasterFid.toString()),
+	const row = await db.query.farcaster.findFirst({
+		where: eq(farcaster.fid, farcasterFid),
+		with: { user: true },
 	});
-	return user;
+	return row?.user ?? null;
 };
 
 /**
  * Create user
  */
 export const createUser = async (input: CreateUser) => {
-	const [newUser] = await db.insert(userTable).values(input).returning();
+	const [newUser] = await db.insert(user).values(input).returning();
 	return newUser;
 };
 
@@ -56,41 +56,43 @@ export const createUser = async (input: CreateUser) => {
  * Internal function to create a user from an address or a already fetched Neynar user
  * @param inboxId - The inboxId of the user
  * @param address - The address of the user
- * @param user - The user
+ * @param neynarUser - The user
  * @returns
  */
 const createUserFromAddress = async (
 	inboxId?: string,
 	address?: string,
-	user?: NeynarUser,
-): Promise<User> => {
+	neynarUser?: NeynarUser,
+): Promise<User & { farcaster?: Farcaster }> => {
 	let ensName: string | undefined;
 	let baseName: string | undefined;
 	let ensAvatarUrl: string | null = null;
 	let baseAvatarUrl: string | null = null;
-	let farcasterFid: string | undefined = user?.fid.toString();
-	let farcasterAvatarUrl: string | null = user?.pfp_url
-		? formatAvatarSrc(user?.pfp_url)
+	let farcasterFid: number | undefined = neynarUser?.fid;
+	let farcasterAvatarUrl: string | null = neynarUser?.pfp_url
+		? formatAvatarSrc(neynarUser?.pfp_url)
 		: null;
-	let farcasterUsername: string | undefined = user?.username;
-	let farcasterDisplayName: string | undefined = user?.display_name;
+	let farcasterUsername: string | undefined = neynarUser?.username;
+	let farcasterDisplayName: string | undefined = neynarUser?.display_name;
 
 	if (address) {
-		const [ensName, baseName] = await Promise.all([
+		const [resolvedEnsName, resolvedBaseName] = await Promise.all([
 			getEnsName(address as Address),
 			getBasename(address as Address),
 		]);
+		ensName = resolvedEnsName ?? undefined;
+		baseName = resolvedBaseName ?? undefined;
 		if (ensName) {
 			ensAvatarUrl = await getEnsAvatar(ensName);
 		}
 		if (baseName) {
 			baseAvatarUrl = await getBasenameAvatar(baseName);
 		}
-		if (!user) {
+		if (!neynarUser) {
 			try {
 				const farcasterUser = await fetchUserByAddress(address as Address);
 				if (farcasterUser) {
-					farcasterFid = farcasterUser.fid.toString();
+					farcasterFid = farcasterUser.fid;
 					farcasterAvatarUrl = farcasterUser.pfp_url
 						? formatAvatarSrc(farcasterUser.pfp_url)
 						: null;
@@ -102,19 +104,107 @@ const createUserFromAddress = async (
 			}
 		}
 	}
-	const created = await createUser({
-		inboxId,
-		address,
-		ensName,
-		baseName,
-		ensAvatarUrl,
-		baseAvatarUrl,
-		farcasterFid,
-		farcasterAvatarUrl,
-		farcasterUsername,
-		farcasterDisplayName,
+
+	if (!farcasterFid) {
+		throw new Error(
+			"Unable to resolve Farcaster FID for user creation. Address or Neynar user with fid is required.",
+		);
+	}
+
+	// If farcaster user already exists, link and update missing fields
+	const existingFc = await db.query.farcaster.findFirst({
+		where: eq(farcaster.fid, farcasterFid),
+		with: { user: true },
 	});
-	return created;
+	if (existingFc?.user) {
+		// Ensure inboxId is set if provided
+		if (inboxId && !existingFc.inboxId) {
+			await db
+				.update(farcaster)
+				.set({ inboxId })
+				.where(
+					and(
+						eq(farcaster.fid, farcasterFid),
+						eq(farcaster.userId, existingFc.user.id),
+					),
+				);
+		}
+		// Ensure wallet address exists
+		if (address) {
+			await db
+				.insert(walletAddress)
+				.values({
+					id: ulid(),
+					userId: existingFc.user.id,
+					address,
+					chainId: 1,
+					isPrimary: false,
+					ensName,
+					ensAvatarUrl,
+					baseName,
+					baseAvatarUrl,
+				})
+				.onConflictDoNothing();
+		}
+		return { ...existingFc.user, farcaster: existingFc };
+	}
+
+	// Create everything in a transaction
+	return await db.transaction(async (tx) => {
+		const newUserId = ulid();
+		const placeholderName =
+			farcasterDisplayName || farcasterUsername || `user-${farcasterFid}`;
+		const placeholderEmail = `${farcasterFid}@farcaster.emails`;
+		const [createdUser] = await tx
+			.insert(user)
+			.values({
+				id: newUserId,
+				name: placeholderName,
+				email: placeholderEmail,
+				image: farcasterAvatarUrl ?? undefined,
+			})
+			.returning();
+
+		if (address) {
+			await tx
+				.insert(walletAddress)
+				.values({
+					id: ulid(),
+					userId: createdUser.id,
+					address,
+					chainId: 1,
+					isPrimary: true,
+					ensName,
+					ensAvatarUrl,
+					baseName,
+					baseAvatarUrl,
+				})
+				.onConflictDoNothing();
+		}
+
+		const ensuredFarcasterFid: number = farcasterFid;
+		if (!address) {
+			throw new Error(
+				"Cannot create farcaster profile without custody address",
+			);
+		}
+
+		const [createdFarcaster] = await tx
+			.insert(farcaster)
+			.values({
+				id: ulid(),
+				userId: createdUser.id,
+				inboxId,
+				fid: ensuredFarcasterFid,
+				username: farcasterUsername ?? placeholderName,
+				displayName: farcasterDisplayName ?? placeholderName,
+				avatarUrl: farcasterAvatarUrl ?? undefined,
+				custodyAddress: address,
+			})
+			.returning();
+
+		return { ...createdUser, farcaster: createdFarcaster ?? undefined };
+	});
 };
 
 /**
@@ -123,10 +213,12 @@ const createUserFromAddress = async (
 export const getOrCreateUserByInboxId = async (
 	inboxId: string,
 	address?: string,
-): Promise<User> => {
+): Promise<User | null> => {
 	const existing = await getUserByInboxId(inboxId);
-	if (existing) return existing;
-	return createUserFromAddress(inboxId, address);
+	if (existing) {
+		return existing;
+	}
+	return await createUserFromAddress(inboxId, address);
 };
 
 /**
@@ -135,25 +227,31 @@ export const getOrCreateUserByInboxId = async (
  * @returns
  */
 export const getOrCreateUserByFarcasterFid = async (
-	user: NeynarUser,
+	neynarUser: NeynarUser,
 ): Promise<User> => {
-	const existing = await getUserByFarcasterFid(user.fid);
+	const existing = await getUserByFarcasterFid(neynarUser.fid);
 	if (existing) return existing;
 
-	const address = user.verified_addresses.primary.eth_address ?? undefined;
-	return createUserFromAddress(undefined, address, user);
+	const address =
+		neynarUser.verified_addresses.primary.eth_address ?? undefined;
+	if (!address) {
+		throw new Error("Cannot create user without a custody address");
+	}
+	return createUserFromAddress(undefined, address, neynarUser);
 };
 
 /**
  * Get users by a list of inboxIds
  */
-export const getUsersByInboxIds = async (inboxIds: string[]) => {
+export const getUsersByInboxIds = async (
+	inboxIds: string[],
+): Promise<(User & { farcaster?: Farcaster })[]> => {
 	if (inboxIds.length === 0) return [];
-	const users = await db
-		.select()
-		.from(userTable)
-		.where(inArray(userTable.inboxId, inboxIds));
-	return users;
+	const rows = await db.query.farcaster.findMany({
+		where: inArray(farcaster.inboxId, inboxIds),
+		with: { user: true },
+	});
+	return rows.map((r) => ({ ...r.user, farcaster: r }));
 };
 
 /**
@@ -165,12 +263,17 @@ export const getOrCreateUsersByInboxIds = async (
 	data: { inboxId: string; address?: string }[],
 ) => {
 	const inboxIds = data.map((d) => d.inboxId);
-	const users = await getUsersByInboxIds(inboxIds);
-	const usersToCreate = data.filter(
-		(d) => !users.find((u) => u.inboxId === d.inboxId),
+	const existing = await getUsersByInboxIds(inboxIds);
+	const existingInboxIds = new Set(
+		existing
+			.map((r) => r.farcaster?.inboxId)
+			.filter((v): v is string => Boolean(v)),
 	);
-	const usersCreated = await Promise.all(
-		usersToCreate.map((d) => createUserFromAddress(d.inboxId, d.address)),
+	const toCreate = data.filter((d) => !existingInboxIds.has(d.inboxId));
+	const created = await Promise.all(
+		toCreate.map(
+			async (d) => await createUserFromAddress(d.inboxId, d.address),
+		),
 	);
-	return [...users, ...usersCreated];
+	return [...existing, ...created];
 };
