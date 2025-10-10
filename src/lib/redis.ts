@@ -2,7 +2,8 @@ import { Redis } from "ioredis";
 import { env } from "./env.js";
 
 // this prevents BullMq from losing sync with Redis state
-const redis = new Redis(env.REDIS_URL, {
+//  (enable double stack lookup using family=0)
+const redis = new Redis(`${env.REDIS_URL}?family=0`, {
 	maxRetriesPerRequest: null,
 });
 
