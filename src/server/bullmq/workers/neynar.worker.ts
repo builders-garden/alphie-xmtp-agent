@@ -59,9 +59,11 @@ neynarWebhookWorker.on("error", (err) => {
 process.on("SIGTERM", async () => {
 	console.log("SIGTERM received, closing neynar-webhook-worker...");
 	await neynarWebhookWorker.close();
+	console.log("SIGTERM neynar-webhook-worker closed");
 });
 
 process.on("SIGINT", async () => {
 	console.log("SIGINT received, closing neynar-webhook-worker...");
 	await neynarWebhookWorker.close();
+	console.log("SIGINT neynar-webhook-worker closed");
 });

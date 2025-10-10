@@ -1,4 +1,13 @@
 import type {
+	WebhookCastCreated,
+	WebhookFollowCreated,
+	WebhookFollowDeleted,
+	WebhookReactionCreated,
+	WebhookReactionDeleted,
+	WebhookUserCreated,
+	WebhookUserUpdated,
+} from "@neynar/nodejs-sdk";
+import type {
 	Webhook,
 	WebhookSubscription,
 	WebhookSubscriptionFilters,
@@ -39,6 +48,7 @@ export const neynarWebhookSchema = z.custom<Webhook>().and(
 		subscription: neynarWebhookSubscriptionSchema,
 	}),
 );
+export type NeynarWebhook = z.infer<typeof neynarWebhookSchema>;
 
 export const neynarWebhookFailureSchema = z.object({
 	code: z.string(),
@@ -93,7 +103,7 @@ export const poolSchema = z.object({
 	protocol_version: z.string().optional(),
 });
 
-export const tradeWebhookPayloadSchema = z.object({
+export const webhookTradeCreatedSchema = z.object({
 	type: z.literal("trade.created"),
 	data: z.object({
 		object: z.literal("trade"),
@@ -114,4 +124,28 @@ export const tradeWebhookPayloadSchema = z.object({
 	}),
 });
 
-export type TradeWebhookPayload = z.infer<typeof tradeWebhookPayloadSchema>;
+export type WebhookTradeCreated = z.infer<typeof webhookTradeCreatedSchema>;
+
+/**
+ * Other webhook events
+ */
+const webhookFollowCreatedSchema = z.custom<WebhookFollowCreated>();
+const webhookFollowDeletedSchema = z.custom<WebhookFollowDeleted>();
+const webhookReactionCreatedSchema = z.custom<WebhookReactionCreated>();
+const webhookReactionDeletedSchema = z.custom<WebhookReactionDeleted>();
+const webhookCastCreatedSchema = z.custom<WebhookCastCreated>();
+const webhookUserCreatedSchema = z.custom<WebhookUserCreated>();
+const webhookUserUpdatedSchema = z.custom<WebhookUserUpdated>();
+
+export const allWebhookEventsSchema = z.union([
+	webhookFollowCreatedSchema,
+	webhookFollowDeletedSchema,
+	webhookReactionCreatedSchema,
+	webhookReactionDeletedSchema,
+	webhookCastCreatedSchema,
+	webhookUserCreatedSchema,
+	webhookUserUpdatedSchema,
+	webhookTradeCreatedSchema,
+]);
+
+export type WebhookEvent = z.infer<typeof allWebhookEventsSchema>;

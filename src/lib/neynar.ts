@@ -1,8 +1,10 @@
-import { createHmac } from "node:crypto";
 import { Configuration, NeynarAPIClient } from "@neynar/nodejs-sdk";
 import type { User as NeynarUser } from "@neynar/nodejs-sdk/build/api/index.js";
 import ky from "ky";
-import type { NeynarWebhookResponse } from "../types/neynar.type.js";
+import type {
+	NeynarWebhook,
+	NeynarWebhookResponse,
+} from "../types/neynar.type.js";
 import { formatAvatarSrc } from "../utils/index.js";
 import { env } from "./env.js";
 
@@ -89,6 +91,26 @@ export const fetchUserByAddress = async (
 };
 
 /**
+ * Get a webhook from Neynar by ID
+ * @param webhookId - The ID of the webhook to get
+ * @returns The webhook
+ */
+export const getNeynarWebhookById = async (webhookId: string) => {
+	const data = await neynarClient.lookupWebhook({
+		webhookId,
+	});
+	console.log("data", JSON.stringify(data, null, 2));
+	if (
+		!("webhook" in data) ||
+		!data.webhook ||
+		("success" in data && !data.success)
+	) {
+		return null;
+	}
+	return data.webhook as NeynarWebhook;
+};
+
+/**
  * Create a webhook in Neynar, creating the subscription for the trade.created event
  * @param webhookNumber - The number of the webhook
  * @param webhookUrl - The URL of the webhook
@@ -144,11 +166,15 @@ export const createNeynarWebhookTradeCreated = async ({
  */
 export const updateNeynarWebhookTradeCreated = async ({
 	webhookId,
+	webhookUrl,
+	webhookName,
 	fids,
 	minNeynarScore,
 	minTokenAmountUSDC,
 }: {
 	webhookId: string;
+	webhookUrl: string;
+	webhookName: string;
 	fids: number[];
 	minNeynarScore?: number;
 	minTokenAmountUSDC?: number;
@@ -157,24 +183,39 @@ export const updateNeynarWebhookTradeCreated = async ({
 		minNeynarScore && minNeynarScore >= 0 && minNeynarScore <= 1
 			? minNeynarScore
 			: undefined;
-	const data = await ky
-		.put<NeynarWebhookResponse>("https://api.neynar.com/v2/farcaster/webhook", {
-			headers: {
-				"x-api-key": env.NEYNAR_API_KEY,
-			},
-			json: {
-				webhook_id: webhookId,
-				subscription: {
-					"trade.created": {
-						fids,
-						minimum_trader_neynar_score,
-						minimum_token_amount_usdc: minTokenAmountUSDC,
-					},
+	const response = await fetch("https://api.neynar.com/v2/farcaster/webhook", {
+		method: "PUT",
+		headers: {
+			"x-api-key": env.NEYNAR_API_KEY,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			webhook_id: webhookId,
+			name: webhookName,
+			url: webhookUrl,
+			subscription: {
+				"trade.created": {
+					fids,
+					minimum_trader_neynar_score,
+					minimum_token_amount_usdc: minTokenAmountUSDC,
 				},
 			},
-		})
-		.json();
+		}),
+	});
 
+	if (!response.ok) {
+		const error = await response.json();
+		console.error("Failed to update webhook", JSON.stringify(error, null, 2));
+		throw new Error(`Failed to update webhook: ${response.statusText}`);
+	}
+	const data = (await response.json()) as NeynarWebhookResponse;
+	if (
+		!("webhook" in data) ||
+		!data.webhook ||
+		("success" in data && !data.success)
+	) {
+		console.error("Failed to update webhook", JSON.stringify(data, null, 2));
+	}
 	return data;
 };
 
@@ -192,25 +233,4 @@ export const deleteNeynarWebhook = async ({
 		webhookId,
 	});
 	return data;
-};
-
-/**
- * Verify a Neynar signature
- * @param signature - The signature to verify
- * @param body - The body to verify
- * @returns
- */
-export const verifyNeynarSignature = ({
-	signature,
-	body,
-}: {
-	signature: string;
-	body: string;
-}) => {
-	if (!signature) return false;
-	const hmac = createHmac("sha512", env.NEYNAR_WEBHOOK_SECRET);
-	hmac.update(body);
-	const calculatedSignature = hmac.digest("hex");
-	const isValid = calculatedSignature === signature;
-	return isValid;
 };

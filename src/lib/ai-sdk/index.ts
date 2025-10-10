@@ -11,7 +11,7 @@ import {
 	sendActions,
 	sendConfirmation,
 } from "../../utils/index.js";
-import { addUsersToQueue } from "../../utils/queue.util.js";
+import { updateUsersToQueue } from "../../utils/queue.util.js";
 import { SYSTEM_PROMPT } from "../constants.js";
 import { env } from "../env.js";
 import { tools } from "./tools.js";
@@ -91,13 +91,15 @@ export const aiGenerateAnswer = async ({
 					message: `Confirm to start tracking @${trackOutput.farcasterUser.username} (fid ${trackOutput.farcasterUser.fid})?`,
 					onYes: async (ctx) => {
 						// add job to update neynar webhook with new user fid
-						const job = await addUsersToQueue([
-							{
-								fid: trackOutput.farcasterUser.fid,
-								userId: trackOutput.farcasterUser.userId,
-								groupId: xmtpContext.conversation.id,
-							},
-						]);
+						const job = await updateUsersToQueue({
+							addUsers: [
+								{
+									fid: trackOutput.farcasterUser.fid,
+									userId: trackOutput.farcasterUser.userId,
+									groupId: xmtpContext.conversation.id,
+								},
+							],
+						});
 						console.log(`[ai-sdk] Job added to add users queue: ${job.id}`);
 						await ctx.sendText("User added to group trackings!");
 					},

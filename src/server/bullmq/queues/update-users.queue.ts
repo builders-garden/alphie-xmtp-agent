@@ -1,9 +1,9 @@
 import { Queue } from "bullmq";
 import { redisConnection } from "../../../lib/redis.js";
-import { type AddUsersJobData, QUEUES } from "../../../types/index.js";
+import { QUEUES, type UpdateUsersJobData } from "../../../types/index.js";
 
-export const addUsersQueue = new Queue<AddUsersJobData>(
-	QUEUES.ADD_USERS_QUEUE,
+export const updateUsersQueue = new Queue<UpdateUsersJobData>(
+	QUEUES.UPDATE_USERS_QUEUE,
 	{
 		connection: redisConnection,
 		defaultJobOptions: {

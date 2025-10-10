@@ -10,6 +10,7 @@ import { base } from "viem/chains";
 import { WELCOME_MESSAGE } from "./lib/constants.js";
 import { getOrCreateGroupByConversationId } from "./lib/db/queries/index.js";
 import { env } from "./lib/env.js";
+import { redisConnection } from "./lib/redis.js";
 import { createXmtpAgent, handleXmtpMessage } from "./lib/xmtp/agent.js";
 import {
 	eyesReactionMiddleware,
@@ -27,12 +28,18 @@ import { getXmtpActions, registerXmtpActions } from "./utils/index.js";
 
 // Import Bull jobs and workers to process jobs
 import "./server/bullmq/jobs/index.js";
-import "./server/bullmq/workers/index.js";
+import {
+	addUsersWorker,
+	neynarWebhookWorker,
+} from "./server/bullmq/workers/index.js";
+import { verifyNeynarSignatureMiddleware } from "./server/middleware/auth.middleware.js";
+import type { RequestWithRawBody } from "./types/index.js";
 
 async function main() {
 	const app = express();
 	const port = env.PORT;
 	const allowedOrigins = ["*"];
+	let server: ReturnType<typeof app.listen> | undefined;
 
 	// Middlewares
 	app.use(
@@ -43,7 +50,14 @@ async function main() {
 		}),
 	);
 	app.use(cookieParserMiddleware());
-	app.use(express.json());
+	app.use(
+		express.json({
+			verify: (req, _res, buf) => {
+				// capture raw body for HMAC verification
+				(req as RequestWithRawBody).rawBody = buf.toString("utf8");
+			},
+		}),
+	);
 	app.use(helmet());
 	app.use(morganLogger("dev"));
 	app.use(responseMiddleware);
@@ -67,7 +81,7 @@ async function main() {
 		res.json({ status: "ok" });
 	});
 
-	app.use("/api/v1/neynar", neynarRoutes);
+	app.use("/api/v1/neynar", verifyNeynarSignatureMiddleware, neynarRoutes);
 
 	// Use custom middlewares for handling 404 and errors
 	app.use(handleNotFound);
@@ -131,9 +145,59 @@ async function main() {
 
 	await xmtpAgent.start();
 
-	app.listen(port, () => {
+	// Start HTTP server and capture handle for graceful shutdown
+	server = app.listen(port, () => {
 		console.log(`🚀 Express.js server is running at http://localhost:${port}`);
 	});
+
+	// Unified graceful shutdown
+	let isShuttingDown = false;
+	const shutdown = async (signal: string) => {
+		if (isShuttingDown) return;
+		isShuttingDown = true;
+		console.log(`${signal} received, shutting down...`);
+
+		const tasks: Array<Promise<unknown>> = [];
+
+		// Close HTTP server
+		tasks.push(
+			new Promise<void>((resolve) => {
+				if (!server) return resolve();
+				server.close(() => resolve());
+			}),
+		);
+
+		// Stop XMTP Agent
+		try {
+			tasks.push(xmtpAgent.stop?.() ?? Promise.resolve());
+		} catch {}
+
+		// Close BullMQ workers
+		try {
+			tasks.push(addUsersWorker.close());
+			tasks.push(neynarWebhookWorker.close());
+		} catch {}
+
+		// Disconnect Redis
+		tasks.push(
+			(async () => {
+				try {
+					await redisConnection.quit();
+				} catch {
+					try {
+						redisConnection.disconnect();
+					} catch {}
+				}
+			})(),
+		);
+
+		await Promise.allSettled(tasks);
+		console.log("Shutdown complete. Exiting.");
+		setTimeout(() => process.exit(0), 100).unref();
+	};
+
+	process.on("SIGINT", () => void shutdown("SIGINT"));
+	process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
 main().catch((error) => {

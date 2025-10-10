@@ -7,7 +7,7 @@ import type {
 	JobResult,
 	NeynarWebhookJobData,
 } from "../../types/index.js";
-import { tradeWebhookPayloadSchema } from "../../types/neynar.type.js";
+import { allWebhookEventsSchema } from "../../types/neynar.type.js";
 import { getChainByName } from "../../utils/viem.util.js";
 import { neynarWebhookQueue } from "../bullmq/queues/neynar.queue.js";
 
@@ -19,7 +19,7 @@ import { neynarWebhookQueue } from "../bullmq/queues/neynar.queue.js";
  */
 export const handleWebhookEvent = async (req: Request, res: Response) => {
 	try {
-		const parseBody = tradeWebhookPayloadSchema.safeParse(req.body);
+		const parseBody = allWebhookEventsSchema.safeParse(req.body);
 		if (!parseBody.success) {
 			console.error("Invalid request body", parseBody.error.message);
 			res.status(400).json({
@@ -29,7 +29,17 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 			return;
 		}
 
-		const { trader, transaction } = parseBody.data.data;
+		const webhookEvent = parseBody.data;
+		if (webhookEvent.type !== "trade.created") {
+			console.warn("Invalid webhook event", webhookEvent.type);
+			res.status(200).json({
+				status: "success",
+				message: "Invalid webhook event",
+			});
+			return;
+		}
+
+		const { trader, transaction } = webhookEvent.data;
 		const jobId = ulid();
 		if (!trader) {
 			res.status(200).json({
@@ -55,7 +65,7 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 					sellToken: transaction.net_transfer.sending_token.token
 						.address as Address,
 					sellAmount:
-						transaction.net_transfer.receiving_token.balance.in_token ?? "0",
+						transaction.net_transfer.sending_token.balance.in_token ?? "0",
 				},
 			},
 			{

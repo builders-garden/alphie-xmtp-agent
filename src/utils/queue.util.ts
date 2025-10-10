@@ -1,17 +1,23 @@
-import { addUsersQueue } from "../server/bullmq/queues/add-users.queue.js";
+import { updateUsersQueue } from "../server/bullmq/queues/update-users.queue.js";
+import type { QueueUser } from "../types/queue.type.js";
 
 /**
  * Add users to the queue
  * @param users - The users to add to the queue
  * @returns
  */
-export const addUsersToQueue = async (
-	users: { fid: number; userId: string; groupId?: string }[],
-) => {
-	const job = await addUsersQueue.add(
-		"process-add-users",
+export const updateUsersToQueue = async ({
+	addUsers,
+	removeUsers,
+}: {
+	addUsers?: QueueUser[];
+	removeUsers?: QueueUser[];
+}) => {
+	const job = await updateUsersQueue.add(
+		"process-update-users",
 		{
-			users,
+			addUsers: addUsers ?? [],
+			removeUsers: removeUsers ?? [],
 		},
 		{
 			attempts: 3,

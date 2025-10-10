@@ -7,7 +7,7 @@ import {
 const router = express.Router();
 
 // handle copy trade route
-router.post("/webhook", handleWebhookEvent);
+router.post("/webhooks", handleWebhookEvent);
 router.get("/webhook/status/:jobId", checkJobStatus);
 
 export default router;

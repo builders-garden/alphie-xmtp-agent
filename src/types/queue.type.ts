@@ -3,11 +3,18 @@ import type { HandleCopyTradeSchema } from "./server.type.js";
 
 export enum QUEUES {
 	NEYNAR_WEBHOOK_QUEUE = "neynar-webhook-queue",
-	ADD_USERS_QUEUE = "add-users-queue",
+	UPDATE_USERS_QUEUE = "update-users-queue",
 }
 
-export interface AddUsersJobData {
-	users: { fid: number; userId: string; groupId?: string }[];
+export interface QueueUser {
+	fid: number;
+	userId: string;
+	groupId?: string;
+}
+
+export interface UpdateUsersJobData {
+	addUsers: QueueUser[];
+	removeUsers: QueueUser[];
 }
 
 export interface NeynarWebhookJobData {

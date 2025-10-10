@@ -9,12 +9,13 @@ import { db } from "../index.js";
  */
 export const getLatestNeynarWebhookFromDb =
 	async (): Promise<NeynarWebhook | null> => {
-		const data = await db
-			.select()
-			.from(neynarWebhook)
-			.orderBy(desc(neynarWebhook.id))
-			.limit(1);
-		return data.length > 0 ? data[0] : null;
+		const data = await db.query.neynarWebhook.findFirst({
+			orderBy: desc(neynarWebhook.id),
+		});
+		if (!data) {
+			return null;
+		}
+		return data;
 	};
 
 /**
@@ -30,7 +31,6 @@ export const saveNeynarWebhookInDb = async (
 		.values({
 			neynarWebhookId: webhook.webhook.webhook_id,
 			webhookUrl: webhook.webhook.target_url,
-			fids: webhook.webhook.subscription.filters["trade.created"].fids,
 		})
 		.returning();
 	if (data.length > 0) {
@@ -52,7 +52,6 @@ export const updateNeynarWebhookInDb = async (
 		.set({
 			neynarWebhookId: webhook.webhook.webhook_id,
 			webhookUrl: webhook.webhook.target_url,
-			fids: webhook.webhook.subscription.filters["trade.created"].fids,
 		})
 		.where(eq(neynarWebhook.neynarWebhookId, webhook.webhook.webhook_id));
 	return data;

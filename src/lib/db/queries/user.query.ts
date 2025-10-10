@@ -23,12 +23,17 @@ import { db } from "../index.js";
 /**
  * Get user by XMTP inboxId
  */
-export const getUserByInboxId = async (inboxId: string) => {
+export const getUserByInboxId = async (
+	inboxId: string,
+): Promise<(User & { farcaster?: Farcaster }) | null> => {
 	const row = await db.query.farcaster.findFirst({
 		where: eq(farcaster.inboxId, inboxId),
 		with: { user: true },
 	});
-	return row?.user ?? null;
+	if (!row) {
+		return null;
+	}
+	return { ...row.user, farcaster: row };
 };
 
 /**
@@ -213,7 +218,7 @@ const createUserFromAddress = async (
 export const getOrCreateUserByInboxId = async (
 	inboxId: string,
 	address?: string,
-): Promise<User | null> => {
+): Promise<(User & { farcaster?: Farcaster }) | null> => {
 	const existing = await getUserByInboxId(inboxId);
 	if (existing) {
 		return existing;

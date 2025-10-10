@@ -2,8 +2,8 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import { env } from "../../lib/env.js";
-import { addUsersQueue } from "./queues/add-users.queue.js";
 import { neynarWebhookQueue } from "./queues/neynar.queue.js";
+import { updateUsersQueue } from "./queues/update-users.queue.js";
 
 export const getBullboardRouter = (basePath: string) => {
 	console.log(`🧭 Bull Board: http://localhost:${env.PORT}${basePath}`);
@@ -16,7 +16,7 @@ export const getBullboardRouter = (basePath: string) => {
 			new BullMQAdapter(neynarWebhookQueue, {
 				allowRetries: true,
 			}),
-			new BullMQAdapter(addUsersQueue, {
+			new BullMQAdapter(updateUsersQueue, {
 				allowRetries: true,
 			}),
 		],

@@ -177,7 +177,7 @@ export const neynarWebhook = sqliteTable("neynar_webhook", {
 	id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
 	neynarWebhookId: text("neynar_webhook_id").notNull().unique(),
 	webhookUrl: text("webhook_url").notNull(),
-	fids: text("fids", { mode: "json" }).$type<number[]>().notNull(),
+	webhookName: text("webhook_name").default("Alphie webhook").notNull(),
 	createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });

@@ -1,25 +1,25 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "../../../lib/redis.js";
 import {
-	type AddUsersJobData,
 	type JobResult,
 	QUEUES,
+	type UpdateUsersJobData,
 } from "../../../types/index.js";
-import { processAddUsersJob } from "../jobs/add-users.job.js";
+import { processAddUsersJob } from "../jobs/update-users.job.js";
 
-export const addUsersWorker = new Worker<AddUsersJobData, JobResult>(
-	QUEUES.ADD_USERS_QUEUE,
+export const addUsersWorker = new Worker<UpdateUsersJobData, JobResult>(
+	QUEUES.UPDATE_USERS_QUEUE,
 	async (job) => {
 		try {
-			console.log(`| add-users-worker | processing job #${job.id}`);
+			console.log(`| update-users-worker | processing job #${job.id}`);
 
 			const result = await processAddUsersJob(job);
 
-			console.log(`| add-users-worker | completed job #${job.id}`);
+			console.log(`| update-users-worker | completed job #${job.id}`);
 
 			return result;
 		} catch (error) {
-			console.error(`| add-users-worker | failed job #${job.id} |`, error);
+			console.error(`| update-users-worker | failed job #${job.id} |`, error);
 			throw error;
 		}
 	},
@@ -36,28 +36,30 @@ export const addUsersWorker = new Worker<AddUsersJobData, JobResult>(
 );
 
 addUsersWorker.on("completed", (job) => {
-	console.log(`✅ add-users-worker #${job.id} completed successfully`);
+	console.log(`✅ update-users-worker #${job.id} completed successfully`);
 });
 
 addUsersWorker.on("failed", (job, err) => {
-	console.error(`❌ add-users-worker #${job?.id} failed:`, err);
+	console.error(`❌ update-users-worker #${job?.id} failed:`, err);
 });
 
 addUsersWorker.on("progress", (job, progress) => {
-	console.log(`⏳ add-users-worker #${job.id} progress: ${progress}%`);
+	console.log(`⏳ update-users-worker #${job.id} progress: ${progress}%`);
 });
 
 addUsersWorker.on("error", (err) => {
-	console.error("add-users-worker error:", err);
+	console.error("update-users-worker error:", err);
 });
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
-	console.log("SIGTERM received, closing add-users-worker...");
+	console.log("SIGTERM received, closing update-users-worker...");
 	await addUsersWorker.close();
+	console.log("SIGTERM update-users-worker closed");
 });
 
 process.on("SIGINT", async () => {
-	console.log("SIGINT received, closing add-users-worker...");
+	console.log("SIGINT received, closing update-users-worker...");
 	await addUsersWorker.close();
+	console.log("SIGINT update-users-worker closed");
 });

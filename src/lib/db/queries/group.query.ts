@@ -5,7 +5,7 @@ import {
 } from "@xmtp/agent-sdk";
 import { and, eq, inArray } from "drizzle-orm";
 import { ulid } from "ulid";
-import { addUsersToQueue } from "../../../utils/queue.util.js";
+import { updateUsersToQueue } from "../../../utils/queue.util.js";
 import {
 	type CreateGroup,
 	type CreateGroupMember,
@@ -15,10 +15,6 @@ import {
 	type UpdateGroup,
 } from "../db.schema.js";
 import { db } from "../index.js";
-import {
-	addUsersToGroupTrackings,
-	removeUsersFromGroupTrackings,
-} from "./tracking.query.js";
 import {
 	getOrCreateUserByInboxId,
 	getOrCreateUsersByInboxIds,
@@ -119,7 +115,7 @@ export const upsertGroupMembers = async (
 			groupId,
 		}))
 		.filter((u) => u.fid > -1);
-	await addUsersToQueue(usersToAdd);
+	await updateUsersToQueue({ addUsers: usersToAdd });
 };
 
 /**
@@ -144,15 +140,17 @@ export const addGroupMembersByInboxIds = async (
 	// Insert, ignoring duplicates
 	await db.insert(groupMember).values(rows).onConflictDoNothing();
 
-	// TODO add users to neynar webhook
-	// const usersToAdd = users
-	// 	.map((u) => ({
-	// 		fid: u.farcaster?.fid ?? -1,
-	// 		userId: u.id,
-	// 		groupId,
-	// 	}))
-	// 	.filter((u) => u.fid > -1);
-	// await addUsersToQueue(usersToAdd);
+	// add users to neynar webhook
+	if (users.length > 0) {
+		const usersToAdd = users
+			.map((u) => ({
+				fid: u?.farcaster?.fid ?? -1,
+				userId: u?.id ?? "",
+				groupId,
+			}))
+			.filter((u) => u.fid > -1);
+		await updateUsersToQueue({ addUsers: usersToAdd });
+	}
 };
 
 /**
@@ -167,9 +165,15 @@ export const removeGroupMembersByInboxIds = async (
 	const userIds = users.map((u) => u.id);
 	if (userIds.length === 0) return;
 
-	// remove members from group tracked users
-	await removeUsersFromGroupTrackings(groupId, userIds);
-	// TODO remove users from neynar webhook
+	// remove users from neynar webhook
+	const usersToRemove = users
+		.map((u) => ({
+			fid: u.farcaster?.fid ?? -1,
+			userId: u.id,
+			groupId,
+		}))
+		.filter((u) => u.fid > -1);
+	await updateUsersToQueue({ removeUsers: usersToRemove });
 
 	// remove members from group members
 	await db
