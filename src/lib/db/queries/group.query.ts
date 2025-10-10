@@ -6,6 +6,7 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import { ulid } from "ulid";
 import { updateUsersToQueue } from "../../../utils/queue.util.js";
+import { XMTP_AGENTS } from "../../xmtp-agents.js";
 import {
 	type CreateGroup,
 	type CreateGroupMember,
@@ -89,13 +90,20 @@ export const upsertGroupMembers = async (
 	const members = membersRaw.filter((m) => m.inboxId !== agentInboxId);
 	if (members.length === 0) return;
 
-	// Ensure all users exist for given inboxIds
-	const data = members.map((m) => ({
-		inboxId: m.inboxId,
-		address: m.accountIdentifiers.find(
-			(i) => i.identifierKind === IdentifierKind.Ethereum,
-		)?.identifier,
-	}));
+	// Ensure all users exist for given inboxIds and the members are not in the XMTP agents list
+	const data = members
+		.map((m) => ({
+			inboxId: m.inboxId,
+			address: m.accountIdentifiers.find(
+				(i) => i.identifierKind === IdentifierKind.Ethereum,
+			)?.identifier,
+		}))
+		.filter(
+			(m) =>
+				!XMTP_AGENTS.some(
+					(a) => a.address.toLowerCase() === m.address?.toLowerCase(),
+				),
+		);
 	const users = await getOrCreateUsersByInboxIds(data);
 
 	const rows: CreateGroupMember[] = users.map((u) => ({

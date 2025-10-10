@@ -17,6 +17,7 @@ import {
 	removeGroupMembersByInboxIds,
 	updateGroup,
 } from "../lib/db/queries/index.js";
+import { XMTP_AGENTS } from "../lib/xmtp-agents.js";
 import type {
 	ActionsContent,
 	GroupUpdatedMessage,
@@ -318,7 +319,7 @@ export const handleGroupUpdated = async ({
 
 		// Add members
 		if (addedInboxes.length > 0) {
-			// filter out the agent from the members
+			// filter out the agent (and any known XMTP agent) from the members
 			const membersToAdd = addedInboxes
 				.filter((inboxId) => inboxId !== agentInboxId)
 				.map((inboxId) => {
@@ -328,7 +329,13 @@ export const handleGroupUpdated = async ({
 					)?.identifier;
 					return { inboxId, address };
 				})
-				.filter((m) => m.address !== undefined && m.address !== agentAddress);
+				.filter((m) => m.address !== undefined && m.address !== agentAddress)
+				.filter(
+					(m) =>
+						!XMTP_AGENTS.some(
+							(a) => a.address.toLowerCase() === m.address?.toLowerCase(),
+						),
+				);
 
 			if (membersToAdd.length > 0) {
 				await addGroupMembersByInboxIds(group.id, membersToAdd);

@@ -1,7 +1,6 @@
 import type { Job } from "bullmq";
 import {
 	addUsersToGroupTrackings,
-	getDistinctTrackedUsers,
 	removeUsersFromGroupTrackings,
 } from "../../../lib/db/queries/index.js";
 import {
@@ -13,6 +12,14 @@ import {
 	updateNeynarWebhookTradeCreated,
 } from "../../../lib/neynar.js";
 import type { JobResult, UpdateUsersJobData } from "../../../types/index.js";
+
+const areSetsEqual = <T>(a: Set<T>, b: Set<T>): boolean => {
+	if (a.size !== b.size) return false;
+	for (const value of a) {
+		if (!b.has(value)) return false;
+	}
+	return true;
+};
 
 /**
  * Process add users job - add users to neynar webhook
@@ -39,11 +46,8 @@ export const processAddUsersJob = async (
 		}
 		await job.updateProgress(5);
 
-		// get all the distinct users that we are already tracking
-		const [users, webhook] = await Promise.all([
-			getDistinctTrackedUsers(),
-			getLatestNeynarWebhookFromDb(),
-		]);
+		// get latest webhook from DB
+		const webhook = await getLatestNeynarWebhookFromDb();
 
 		// if no webhook saved in db, create a new webhook in neynar and save it to db
 		if (!webhook) {
@@ -55,23 +59,10 @@ export const processAddUsersJob = async (
 		}
 		console.log("neynarWebhook", neynarWebhook);
 
-		// Determine which fids are already tracked (for add path)
+		// Normalize inputs
 		const addUsersInput = jobAddUsers ?? [];
 		const removeUsersInput = jobRemoveUsers ?? [];
 
-		const jobUsersFids = addUsersInput.map((u) => u.fid);
-		const inputFidsSet = new Set(jobUsersFids);
-
-		const alreadyTrackedFids = users
-			.filter((u) => typeof u.fid === "number" && inputFidsSet.has(u.fid))
-			.map((u) => u.fid as number);
-		const alreadyTrackedFidsSet = new Set<number>(alreadyTrackedFids);
-
-		// Determine which fids are not already tracked
-		const fidsToAdd =
-			alreadyTrackedFidsSet.size === 0
-				? Array.from(inputFidsSet)
-				: Array.from(inputFidsSet).filter((f) => !alreadyTrackedFidsSet.has(f));
 		// Prepare tracking adds for all requested addUsers (independent of webhook state)
 		const trackingAdds = addUsersInput.map((u) => ({
 			groupId: u.groupId ?? "",
@@ -89,34 +80,45 @@ export const processAddUsersJob = async (
 			removalsByGroup.set(r.groupId, current);
 		}
 
-		if (fidsToAdd.length === 0 && !hasRemovals) {
-			// Ensure group trackings are added even if webhook does not change
-			if (trackingAdds.length > 0) {
-				await addUsersToGroupTrackings(trackingAdds);
-				console.log(
-					`[update-users-job] Ensured group trackings for users ${trackingAdds.map((u) => u.userId)}`,
-				);
-			}
-			await job.updateProgress(100);
-			console.log(
-				"[update-users-job] No changes to process (no adds or removals)",
-			);
-			return {
-				status: "success",
-				message: "No changes to process",
-			};
-		}
-
-		// update the webhook with the new user fids (apply adds and removals)
+		// Calculate merged FIDs to apply to the webhook directly from inputs
 		const currentFids = Array.isArray(
 			neynarWebhook.subscription.filters["trade.created"].fids,
 		)
 			? neynarWebhook.subscription.filters["trade.created"].fids
 			: [];
 		const newFidsSet = new Set<number>(currentFids);
-		for (const fid of fidsToAdd) newFidsSet.add(fid);
+		for (const { fid } of addUsersInput) newFidsSet.add(fid);
 		for (const fid of removeFidsSet) newFidsSet.delete(fid);
 		const mergedFids = Array.from(newFidsSet);
+
+		// Check if webhook actually changes
+		const currentFidsSet = new Set<number>(currentFids);
+		const setsEqual = areSetsEqual(currentFidsSet, newFidsSet);
+
+		if (setsEqual) {
+			// Webhook subscriptions unchanged; still ensure DB tracking updates
+			if (trackingAdds.length > 0) {
+				await addUsersToGroupTrackings(trackingAdds);
+				console.log(
+					`[update-users-job] Ensured group trackings for users ${trackingAdds.map((u) => u.userId)}`,
+				);
+			}
+			if (hasRemovals) {
+				for (const [groupId, userIds] of removalsByGroup.entries()) {
+					await removeUsersFromGroupTrackings(groupId, userIds);
+				}
+				console.log(
+					`[update-users-job] Removed users from group trackings ${Array.from(removalsByGroup.values()).flat()}`,
+				);
+			}
+			await job.updateProgress(100);
+			return {
+				status: "success",
+				message: "No webhook changes; group trackings updated",
+			};
+		}
+
+		console.log("mergedFids", mergedFids);
 
 		// update the webhook in neynar
 		const updatedWebhook = await updateNeynarWebhookTradeCreated({
@@ -125,7 +127,7 @@ export const processAddUsersJob = async (
 			webhookName: webhook.webhookName,
 			fids: mergedFids,
 		});
-		if ("success" in updatedWebhook) {
+		if ("webhook" in updatedWebhook) {
 			await updateNeynarWebhookInDb(updatedWebhook);
 			console.log(
 				`[update-users-job] Webhook updated successfully in db ${updatedWebhook.webhook.webhook_id}`,
@@ -151,7 +153,7 @@ export const processAddUsersJob = async (
 			await job.updateProgress(100);
 			return {
 				status: "success",
-				message: `Updated webhook ${webhook.neynarWebhookId}: added ${fidsToAdd.length}, removed ${removeFidsSet.size}`,
+				message: `Updated webhook ${webhook.neynarWebhookId}: now tracking ${mergedFids.length} fids`,
 			};
 		}
 
