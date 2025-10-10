@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { isHex } from "viem";
 import { z } from "zod";
 
 dotenv.config();
@@ -7,7 +8,6 @@ const envSchema = z.object({
 	APP_URL: z.url().min(1),
 
 	// Server
-	BACKEND_URL: z.url().min(1),
 	PORT: z
 		.string()
 		.refine((val) => !Number.isNaN(Number(val)), {
@@ -20,34 +20,36 @@ const envSchema = z.object({
 		.optional()
 		.default("production"),
 
-	// Api secret key
-	API_SECRET_KEY: z.string().min(1),
-
 	// XMTP Agent
 	XMTP_ENV: z
 		.enum(["dev", "local", "production"])
 		.optional()
 		.default("production"),
-	XMTP_WALLET_KEY: z.string().min(1),
+	XMTP_WALLET_KEY: z
+		.string()
+		.refine((val) => isHex(val), {
+			message: "XMTP_WALLET_KEY must be a valid hex string",
+		})
+		.min(1),
 	XMTP_DB_ENCRYPTION_KEY: z.string().optional(),
-
 	// Fix Railway volume mount path
 	RAILWAY_VOLUME_MOUNT_PATH: z.string().optional().default("."),
 
-	// Database
+	// Database, get yours at get yours at https://app.turso.tech
 	DATABASE_URL: z.string().min(1),
 	DATABASE_TOKEN: z.string().min(1),
 
-	// Neynar
+	// Neynar, get yours at https://dev.neynar.com
 	NEYNAR_API_KEY: z.string().min(1),
 	NEYNAR_WEBHOOK_SECRET: z.string().min(1),
 
-	// OpenAI
+	// OpenAI, get yours at https://platform.openai.com
 	OPENAI_API_KEY: z.string().min(1),
 
-	// 0x api key
+	// 0x api key, get yours at https://0x.org
 	ZEROX_API_KEY: z.string().min(1),
 
+	// PAYMASTERS, if base -> coinbase cdp; else -> Pimlico ###
 	// Coinbase Developer Platform Client Api Key, get yours at https://portal.cdp.coinbase.com
 	COINBASE_CDP_CLIENT_API_KEY: z.string().min(1),
 	// Pimlico API KEY, get yours at https://dashboard.pimlico.io
