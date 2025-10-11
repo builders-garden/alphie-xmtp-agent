@@ -3,12 +3,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import { ulid } from "ulid";
 import type { Address } from "viem";
 import { formatAvatarSrc } from "../../../utils/index.js";
-import {
-	getBasename,
-	getBasenameAvatar,
-	getEnsAvatar,
-	getEnsName,
-} from "../../ens.js";
 import { fetchUserByAddress } from "../../neynar.js";
 import {
 	type CreateUser,
@@ -69,10 +63,6 @@ const createUserFromAddress = async (
 	address?: string,
 	neynarUser?: NeynarUser,
 ): Promise<User & { farcaster?: Farcaster }> => {
-	let ensName: string | undefined;
-	let baseName: string | undefined;
-	let ensAvatarUrl: string | null = null;
-	let baseAvatarUrl: string | null = null;
 	let farcasterFid: number | undefined = neynarUser?.fid;
 	let farcasterAvatarUrl: string | null = neynarUser?.pfp_url
 		? formatAvatarSrc(neynarUser?.pfp_url)
@@ -81,18 +71,6 @@ const createUserFromAddress = async (
 	let farcasterDisplayName: string | undefined = neynarUser?.display_name;
 
 	if (address) {
-		const [resolvedEnsName, resolvedBaseName] = await Promise.all([
-			getEnsName(address as Address),
-			getBasename(address as Address),
-		]);
-		ensName = resolvedEnsName ?? undefined;
-		baseName = resolvedBaseName ?? undefined;
-		if (ensName) {
-			ensAvatarUrl = await getEnsAvatar(ensName);
-		}
-		if (baseName) {
-			baseAvatarUrl = await getBasenameAvatar(baseName);
-		}
 		if (!neynarUser) {
 			try {
 				const farcasterUser = await fetchUserByAddress(address as Address);
@@ -144,10 +122,6 @@ const createUserFromAddress = async (
 					address,
 					chainId: 1,
 					isPrimary: false,
-					ensName,
-					ensAvatarUrl,
-					baseName,
-					baseAvatarUrl,
 				})
 				.onConflictDoNothing();
 		}
@@ -179,10 +153,6 @@ const createUserFromAddress = async (
 					address,
 					chainId: 1,
 					isPrimary: true,
-					ensName,
-					ensAvatarUrl,
-					baseName,
-					baseAvatarUrl,
 				})
 				.onConflictDoNothing();
 		}

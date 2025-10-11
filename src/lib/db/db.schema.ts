@@ -98,10 +98,6 @@ export const walletAddress = sqliteTable("wallet_address", {
 	address: text("address").notNull().unique(),
 	chainId: integer("chain_id").default(1), // ethereum mainnet
 	isPrimary: integer("is_primary", { mode: "boolean" }).default(false),
-	ensName: text("ens_name"),
-	ensAvatarUrl: text("ens_avatar_url"),
-	baseName: text("base_name"),
-	baseAvatarUrl: text("base_avatar_url"),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),
@@ -120,7 +116,6 @@ export const farcaster = sqliteTable("farcaster", {
 	custodyAddress: text("custody_address")
 		.notNull()
 		.references(() => walletAddress.address, { onDelete: "cascade" }),
-	ethereumWallets: text("ethereum_wallets", { mode: "json" }),
 	notificationDetails: text("notification_details", {
 		mode: "json",
 	}).$type<MiniAppNotificationDetails | null>(),
@@ -194,9 +189,6 @@ export const groupTrackedUser = sqliteTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		neynarWebhookId: integer("neynar_webhook_id", {
-			mode: "number",
-		}).references(() => neynarWebhook.id, { onDelete: "set null" }),
 		addedByUserId: text("added_by_user_id").references(() => user.id, {
 			onDelete: "set null",
 		}),
@@ -308,6 +300,10 @@ export const groupTrackedUserRelations = relations(
 		user: one(user, {
 			fields: [groupTrackedUser.userId],
 			references: [user.id],
+		}),
+		farcaster: one(farcaster, {
+			fields: [groupTrackedUser.userId],
+			references: [farcaster.userId],
 		}),
 		addedBy: one(user, {
 			fields: [groupTrackedUser.addedByUserId],

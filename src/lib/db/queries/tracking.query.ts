@@ -1,5 +1,5 @@
 import { and, countDistinct, eq, inArray } from "drizzle-orm";
-import { farcaster, groupTrackedUser } from "../db.schema.js";
+import { groupTrackedUser } from "../db.schema.js";
 import { db } from "../index.js";
 import { getGroupByConversationId } from "./group.query.js";
 import { getUserByFarcasterFid, getUserByInboxId } from "./user.query.js";
@@ -121,44 +121,4 @@ export const getGroupsTrackingUserByFarcasterFid = async (fid: number) => {
 	const user = await getUserByFarcasterFid(fid);
 	if (!user) return [];
 	return getGroupsTrackingUserByUserId(user.id);
-};
-
-/**
- * Get distinct tracked users
- * @returns The distinct tracked users
- */
-export const getDistinctTrackedUsers = async (): Promise<
-	{
-		userId: string;
-		webhookId: number | null;
-		groupId: string | null;
-		fid: number;
-		username: string;
-	}[]
-> => {
-	try {
-		const users = await db
-			.selectDistinct({
-				userId: groupTrackedUser.userId,
-				groupId: groupTrackedUser.groupId,
-				webhookId: groupTrackedUser.neynarWebhookId,
-				fid: farcaster.fid,
-				username: farcaster.username,
-			})
-			.from(groupTrackedUser)
-			.leftJoin(farcaster, eq(groupTrackedUser.userId, farcaster.userId));
-		const retUsers = users
-			.filter((u) => u.fid !== null)
-			.map((u) => ({
-				userId: u.userId,
-				groupId: u.groupId,
-				webhookId: u.webhookId,
-				fid: u.fid ?? -1,
-				username: u.username ?? "",
-			}));
-		return retUsers;
-	} catch (error) {
-		console.error("Error getting distinct tracked users:", error);
-		return [];
-	}
 };
