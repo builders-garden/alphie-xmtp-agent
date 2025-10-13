@@ -65,6 +65,8 @@ export function swapERC20(data: {
 
 	// handle calls
 	const calls: WalletSendCallsParams["calls"] = [];
+	// adjust gas returned by 0x with a 10% extra
+	const adjGas = Math.ceil(Number(data.gas) * 1.1).toString();
 	// if needed, add approve call for the 0x swap api
 	if (data.needsApprove) {
 		const approvedMethodData = encodeFunctionData({
@@ -76,6 +78,7 @@ export function swapERC20(data: {
 		calls.push({
 			to: data.tokenAddress,
 			data: approvedMethodData,
+			gas: toHex("50000"), //static 50k gas for the approve call
 			metadata: {
 				description: `Approve ${data.sellAmount.toFixed(2)} ${data.sellTokenSymbol}`,
 				transactionType: "approve",
@@ -88,7 +91,7 @@ export function swapERC20(data: {
 		to: data.to,
 		data: data.data,
 		value: data.value ? toHex(data.value) : undefined,
-		gas: toHex(data.gas),
+		gas: toHex(adjGas), //dynamic incremented gas from 0x api result
 		metadata: {
 			description: `Swap ${data.sellAmount.toFixed(2)} ${data.sellTokenSymbol} for ${data.buyTokenSymbol} on ${network.networkName}`,
 			transactionType: "swap",
