@@ -113,9 +113,6 @@ export const farcaster = sqliteTable("farcaster", {
 	username: text("username").notNull(),
 	displayName: text("display_name"),
 	avatarUrl: text("avatar_url"),
-	custodyAddress: text("custody_address")
-		.notNull()
-		.references(() => walletAddress.address, { onDelete: "cascade" }),
 	notificationDetails: text("notification_details", {
 		mode: "json",
 	}).$type<MiniAppNotificationDetails | null>(),
@@ -166,18 +163,6 @@ export const groupMember = sqliteTable(
 );
 
 /**
- * Neynar Webhook Table
- */
-export const neynarWebhook = sqliteTable("neynar_webhook", {
-	id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-	neynarWebhookId: text("neynar_webhook_id").notNull().unique(),
-	webhookUrl: text("webhook_url").notNull(),
-	webhookName: text("webhook_name").default("Alphie webhook").notNull(),
-	createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-	updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-});
-
-/**
  * Alphie Group Tracked Users (many-to-many: groups <-> users being tracked)
  */
 export const groupTrackedUser = sqliteTable(
@@ -204,6 +189,18 @@ export const groupTrackedUser = sqliteTable(
 );
 
 /**
+ * Neynar Webhook Table
+ */
+export const neynarWebhook = sqliteTable("neynar_webhook", {
+	id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+	neynarWebhookId: text("neynar_webhook_id").notNull().unique(),
+	webhookUrl: text("webhook_url").notNull(),
+	webhookName: text("webhook_name").default("Alphie webhook").notNull(),
+	createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+/**
  * Drizzle Types
  */
 export type User = typeof user.$inferSelect;
@@ -227,10 +224,6 @@ export type UpdateWalletAddress = Partial<CreateWalletAddress>;
 export type Farcaster = typeof farcaster.$inferSelect;
 export type CreateFarcaster = typeof farcaster.$inferInsert;
 export type UpdateFarcaster = Partial<CreateFarcaster>;
-
-export type NeynarWebhook = typeof neynarWebhook.$inferSelect;
-export type CreateNeynarWebhook = typeof neynarWebhook.$inferInsert;
-export type UpdateNeynarWebhook = Partial<CreateNeynarWebhook>;
 
 /**
  * Drizzle Relations
@@ -300,10 +293,6 @@ export const groupTrackedUserRelations = relations(
 		user: one(user, {
 			fields: [groupTrackedUser.userId],
 			references: [user.id],
-		}),
-		farcaster: one(farcaster, {
-			fields: [groupTrackedUser.userId],
-			references: [farcaster.userId],
 		}),
 		addedBy: one(user, {
 			fields: [groupTrackedUser.addedByUserId],
