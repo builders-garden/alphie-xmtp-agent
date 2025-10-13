@@ -235,7 +235,6 @@ export const userRelations = relations(user, ({ many }) => ({
 	accounts: many(account),
 	walletAddresses: many(walletAddress),
 	farcasters: many(farcaster),
-	verifications: many(verification),
 	groupMembers: many(groupMember),
 	trackedInGroups: many(groupTrackedUser),
 	trackingRequests: many(groupTrackedUser),
