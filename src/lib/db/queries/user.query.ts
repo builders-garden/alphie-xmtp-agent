@@ -174,7 +174,6 @@ const createUserFromAddress = async (
 				username: farcasterUsername ?? placeholderName,
 				displayName: farcasterDisplayName ?? placeholderName,
 				avatarUrl: farcasterAvatarUrl ?? undefined,
-				custodyAddress: address,
 			})
 			.returning();
 

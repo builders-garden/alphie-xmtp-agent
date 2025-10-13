@@ -225,6 +225,8 @@ export type Farcaster = typeof farcaster.$inferSelect;
 export type CreateFarcaster = typeof farcaster.$inferInsert;
 export type UpdateFarcaster = Partial<CreateFarcaster>;
 
+export type NeynarWebhook = typeof neynarWebhook.$inferSelect;
+
 /**
  * Drizzle Relations
  */
