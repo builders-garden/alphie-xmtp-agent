@@ -73,7 +73,7 @@ export async function isReplyToAgent(
 			}
 
 			// Get recent messages to find the referenced one
-			const messages = await conversation.messages({ limit: 100 });
+			const messages = await conversation.messages();
 			const referencedMessage = messages.find(
 				(msg) => msg.id === referenceMessageId,
 			);
@@ -168,6 +168,24 @@ export function extractMessageContent(message: DecodedMessage): string {
 }
 
 /**
+ * Detect if text contains a mention of the Alphie agent
+ *
+ * Handles common variations:
+ * - with or without leading '@'
+ * - plain handle (alphie) or ENS (alphie.base.eth)
+ * - case-insensitive
+ * - followed by punctuation
+ */
+export function containsAgentMention(text: string): boolean {
+	const normalized = text.normalize();
+	const patterns = [
+		/(^|\s)@?alphie(\b|[^a-z0-9_])/i,
+		/(^|\s)@?alphie\.base\.eth(\b|[^a-z0-9_])/i,
+	];
+	return patterns.some((re) => re.test(normalized));
+}
+
+/**
  * Check if a message should trigger the Alphie agent
  *
  * The agent responds to messages that:
@@ -207,14 +225,16 @@ export async function shouldRespondToMessage({
 	const lowerMessage = messageContent.toLowerCase().trim();
 
 	// If this is a reply to the agent, always process it
-	if (await isReplyToAgent(message, agentInboxId, client)) {
+	const isReply = await isReplyToAgent(message, agentInboxId, client);
+	if (isReply) {
 		return true;
 	}
 
-	// Check if message contains any trigger words/phrases
-	const hasTrigger = AGENT_TRIGGERS.some((trigger) =>
-		lowerMessage.includes(trigger.toLowerCase()),
-	);
+	// Check if message contains any trigger words/phrases or a mention of the agent
+	const hasTrigger =
+		AGENT_TRIGGERS.some((trigger) =>
+			lowerMessage.includes(trigger.toLowerCase()),
+		) || containsAgentMention(messageContent);
 
 	return hasTrigger;
 }
@@ -235,7 +255,8 @@ export function shouldSendHelpHint(message: string): boolean {
 		BOT_MENTIONS.some((mention) => lowerMessage.includes(mention)) &&
 		!AGENT_TRIGGERS.some((trigger) =>
 			lowerMessage.includes(trigger.toLowerCase()),
-		)
+		) &&
+		!containsAgentMention(message)
 	);
 }
 

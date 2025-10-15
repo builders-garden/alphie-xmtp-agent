@@ -143,7 +143,6 @@ export const handleXmtpMessage = async (
 				agentInboxId: ctx.client.inboxId,
 				client: ctx.client,
 			});
-			console.log("Should respond:", shouldRespond);
 			if (shouldRespond) {
 				await thinkingContext.helpers.addThinkingEmoji();
 				if (isSendHelpHint) {
