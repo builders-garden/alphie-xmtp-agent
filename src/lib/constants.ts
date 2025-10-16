@@ -45,16 +45,15 @@ export const AGENT_TRIGGERS = ["@alphie", "@alphie.base.eth"] as const;
 export const BOT_MENTIONS = ["/bot", "/agent", "/ai", "/help"] as const;
 
 export const WELCOME_MESSAGE = `
-👋 Hey, I'm Alphie - your group eyes on the alpha.
+👋 Yo, I'm Alphie - your plug for tracking new users.
 
 Ready for some alpha? Here's how it works:
-→ Add me to a group chat.
 → You will be notified on the trades of the participants of the group.
 → You can copy trade in 1 click.
 
 This group now has its own leaderboard. Bragging rights are officially on the line.
 
-Tag @alphie.base.eth anytime to start a match.
+Tag @alphie.base.eth to start tracking new users, even if they are not in the group chat!
 
 Let the copy trading begin🐂
 `.trim();
@@ -68,6 +67,9 @@ Choose an action below:`;
 
 export const DEFAULT_ACTIONS_MESSAGE = `
 Yo, I’m your plug for tracking new users. You can hit me here tagging @alphie. These are the actions you can perform: `;
+
+export const DEFAULT_ACTIONS_MESSAGE_2 = `
+These are the actions you can perform: `;
 
 // Help hint message
 export const HELP_HINT_MESSAGE =

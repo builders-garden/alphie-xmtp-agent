@@ -7,7 +7,7 @@ import basicAuth from "express-basic-auth";
 import helmet from "helmet";
 import morganLogger from "morgan";
 import { base } from "viem/chains";
-import { WELCOME_MESSAGE } from "./lib/constants.js";
+import { DEFAULT_ACTIONS_MESSAGE_2, WELCOME_MESSAGE } from "./lib/constants.js";
 import { getOrCreateGroupByConversationId } from "./lib/db/queries/index.js";
 import { env } from "./lib/env.js";
 import { redisConnection } from "./lib/redis.js";
@@ -124,7 +124,7 @@ async function main() {
 			// If is new group, send welcome message and actions
 			console.log("Sending welcome message to new group", group.id);
 			await ctx.conversation.send(WELCOME_MESSAGE);
-			const actions = getXmtpActions();
+			const actions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE_2});
 			await ctx.conversation.send(actions, ContentTypeActions);
 		}
 	});
