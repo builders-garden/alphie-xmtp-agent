@@ -332,7 +332,6 @@ export const farcasterRelations = relations(farcaster, ({ one }) => ({
 export const groupRelations = relations(group, ({ many }) => ({
 	members: many(groupMember),
 	trackedUsers: many(groupTrackedUser),
-	activities: many(groupActivity),
 }));
 
 export const groupMemberRelations = relations(groupMember, ({ one }) => ({
@@ -348,7 +347,7 @@ export const groupMemberRelations = relations(groupMember, ({ one }) => ({
 
 export const groupTrackedUserRelations = relations(
 	groupTrackedUser,
-	({ one, many }) => ({
+	({ one }) => ({
 		group: one(group, {
 			fields: [groupTrackedUser.groupId],
 			references: [group.id],
@@ -361,6 +360,5 @@ export const groupTrackedUserRelations = relations(
 			fields: [groupTrackedUser.addedByUserId],
 			references: [user.id],
 		}),
-		activities: many(groupActivity),
 	}),
 );
