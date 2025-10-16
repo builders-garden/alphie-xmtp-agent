@@ -1,6 +1,7 @@
 import type { MiniAppNotificationDetails } from "@farcaster/miniapp-sdk";
 import { relations, sql } from "drizzle-orm";
 import {
+	foreignKey,
 	integer,
 	primaryKey,
 	sqliteTable,
@@ -189,6 +190,57 @@ export const groupTrackedUser = sqliteTable(
 );
 
 /**
+ * Alphie Tokens Table (save info about tokens on a specific chain)
+ */
+export const tokens = sqliteTable("tokens", {
+	id: text("id").primaryKey().notNull(),
+	address: text("address").notNull(),
+	symbol: text("symbol").notNull(),
+	name: text("name").notNull(),
+	imageUrl: text("image_url"),
+	decimals: integer("decimals", { mode: "number" }).notNull(),
+	chainId: integer("chain_id", { mode: "number" }).notNull(),
+	createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+/**
+ * Alphie Group Activity (many-to-many: groups <-> users being tracked)
+ */
+export const groupActivity = sqliteTable(
+	"group_activity",
+	{
+		id: text("id").primaryKey().notNull(),
+		groupId: text("group_id")
+			.notNull()
+			.references(() => group.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		chainId: integer("chain_id", { mode: "number" }).notNull(),
+		txHash: text("tx_hash").notNull(),
+		sellTokenId: text("sell_token_id")
+			.notNull()
+			.references(() => tokens.id, { onDelete: "cascade" }),
+		buyTokenId: text("buy_token_id")
+			.notNull()
+			.references(() => tokens.id, { onDelete: "cascade" }),
+		sellAmount: text("sell_amount").notNull(),
+		buyAmount: text("buy_amount").notNull(),
+		sellMarketCap: text("sell_market_cap").notNull(),
+		buyMarketCap: text("buy_market_cap").notNull(),
+		parentActivityId: text("parent_activity_id"), // auto reference for copy trading from the miniapp/xmtp chat
+		createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	},
+	(t) => [
+		foreignKey({
+			columns: [t.parentActivityId],
+			foreignColumns: [t.id],
+			name: "group_activity_parent_activity_id_fk",
+		}),
+	],
+);
+
+/**
  * Neynar Webhook Table
  */
 export const neynarWebhook = sqliteTable("neynar_webhook", {
@@ -225,6 +277,14 @@ export type Farcaster = typeof farcaster.$inferSelect;
 export type CreateFarcaster = typeof farcaster.$inferInsert;
 export type UpdateFarcaster = Partial<CreateFarcaster>;
 
+export type Tokens = typeof tokens.$inferSelect;
+export type CreateTokens = typeof tokens.$inferInsert;
+export type UpdateTokens = Partial<CreateTokens>;
+
+export type GroupActivity = typeof groupActivity.$inferSelect;
+export type CreateGroupActivity = typeof groupActivity.$inferInsert;
+export type UpdateGroupActivity = Partial<CreateGroupActivity>;
+
 export type NeynarWebhook = typeof neynarWebhook.$inferSelect;
 
 /**
@@ -238,6 +298,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	groupMembers: many(groupMember),
 	trackedInGroups: many(groupTrackedUser),
 	trackingRequests: many(groupTrackedUser),
+	activities: many(groupActivity),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -271,6 +332,7 @@ export const farcasterRelations = relations(farcaster, ({ one }) => ({
 export const groupRelations = relations(group, ({ many }) => ({
 	members: many(groupMember),
 	trackedUsers: many(groupTrackedUser),
+	activities: many(groupActivity),
 }));
 
 export const groupMemberRelations = relations(groupMember, ({ one }) => ({
@@ -286,7 +348,7 @@ export const groupMemberRelations = relations(groupMember, ({ one }) => ({
 
 export const groupTrackedUserRelations = relations(
 	groupTrackedUser,
-	({ one }) => ({
+	({ one, many }) => ({
 		group: one(group, {
 			fields: [groupTrackedUser.groupId],
 			references: [group.id],
@@ -299,5 +361,6 @@ export const groupTrackedUserRelations = relations(
 			fields: [groupTrackedUser.addedByUserId],
 			references: [user.id],
 		}),
+		activities: many(groupActivity),
 	}),
 );
