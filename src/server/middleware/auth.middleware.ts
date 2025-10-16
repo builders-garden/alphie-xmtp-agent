@@ -9,7 +9,12 @@ export const verifyNeynarSignatureMiddleware = (
 	_res: Response,
 	next: NextFunction,
 ): void | Promise<void> => {
-	if (env.NODE_ENV === "development") {
+	if (
+		env.NODE_ENV === "development" ||
+		req.method === "GET" ||
+		req.method === "OPTIONS" ||
+		req.method === "HEAD"
+	) {
 		next();
 		return;
 	}
