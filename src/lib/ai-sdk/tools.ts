@@ -7,7 +7,7 @@ import { fetchUserFromNeynarByFid, searchUserByUsername } from "../neynar.js";
 
 export const tools = {
 	alphie_track: tool({
-		description: "Track a person's trade on the blockchain",
+		description: "Track a new user's activity on the blockchain",
 		inputSchema: z.object({
 			farcasterUsername: z
 				.string()
@@ -59,6 +59,14 @@ export const tools = {
 			};
 		},
 	}),
+	alphie_default: tool({
+		description: "Default response when the request is not related to the tracking of new users",
+		inputSchema: z.object({}),
+		execute: async () => {
+			return HELP_HINT_MESSAGE;
+		},
+	}),
+	/*
 	leaderboard: tool({
 		description: "Get the leaderboard of the group",
 		inputSchema: z.object({}),
@@ -76,4 +84,5 @@ export const tools = {
 			return HELP_HINT_MESSAGE;
 		},
 	}),
+	*/
 };

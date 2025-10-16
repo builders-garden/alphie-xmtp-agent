@@ -166,15 +166,15 @@ export const handleXmtpMessage = async (
 					);
 				}
 
-				const xmtpMembers = await ctx.conversation.members();
+				//const xmtpMembers = await ctx.conversation.members();
 
 				// generate answer with tools
 				const answer = await aiGenerateAnswer({
 					message: messageContent,
 					xmtpContext: ctx,
-					xmtpMessages,
-					xmtpMembers,
-					agentAddress,
+					//xmtpMessages,
+					//xmtpMembers,
+					//agentAddress,
 				});
 				if (answer) {
 					await ctx.sendTextReply(answer);

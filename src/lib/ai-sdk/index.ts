@@ -1,18 +1,9 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import type {
-	DecodedMessage,
-	GroupMember,
-	MessageContext,
-} from "@xmtp/agent-sdk";
+import type { MessageContext } from "@xmtp/agent-sdk";
 import { generateText } from "ai";
-import {
-	convertXmtpToAiModelMessages,
-	getXmtpActions,
-	sendActions,
-	sendConfirmation,
-} from "../../utils/index.js";
+import { getXmtpActions, sendActions, sendConfirmation } from "../../utils/index.js";
 import { updateUsersToQueue } from "../../utils/queue.util.js";
-import { SYSTEM_PROMPT } from "../constants.js";
+import { DEFAULT_ACTIONS_MESSAGE, DEFAULT_RESPONSE_MESSAGE, SYSTEM_PROMPT } from "../constants.js";
 import { env } from "../env.js";
 import { tools } from "./tools.js";
 
@@ -30,28 +21,30 @@ const openai = createOpenAI({
  */
 export const aiGenerateAnswer = async ({
 	message,
-	xmtpMessages,
-	xmtpMembers,
-	agentAddress,
+	//xmtpMessages,
+	//xmtpMembers,
+	//agentAddress,
 	xmtpContext,
 }: {
 	message: string;
-	xmtpMessages: DecodedMessage[];
-	xmtpMembers: GroupMember[];
-	agentAddress: string;
+	//xmtpMessages: DecodedMessage[];
+	//xmtpMembers: GroupMember[];
+	//agentAddress: string;
 	xmtpContext: MessageContext;
 }) => {
+	/*
 	const modelMessages = convertXmtpToAiModelMessages({
 		messages: xmtpMessages,
 		agentInboxId: xmtpContext.client.inboxId,
 		agentAddress,
 		xmtpMembers,
 	});
+	*/
 	// 1. generate text with ai
 	const response = await generateText({
 		model: openai("gpt-4.1-mini"),
 		system: SYSTEM_PROMPT,
-		messages: [...modelMessages, { role: "user", content: message }],
+		messages: [/*...modelMessages,*/ { role: "user", content: message }],
 		tools,
 	});
 
@@ -59,17 +52,20 @@ export const aiGenerateAnswer = async ({
 	const outputStep = response.steps[0].content.find(
 		(part) => part.type === "tool-result",
 	);
+	console.log("Output Step:", outputStep);
 	if (outputStep) {
 		const outputText = (outputStep.output as string) ?? response.text;
 		console.log("Output Text:", outputText);
 
 		const toolName = outputStep.toolName;
+		/*
 		// 2.a help tool
-		if (toolName === "help") {
+		if (toolName === "alphie_help") {
 			const xmtpActions = getXmtpActions();
 			await sendActions(xmtpContext, xmtpActions);
 			return outputText;
 		}
+		*/
 		// 2.b track tool
 		if (toolName === "alphie_track") {
 			const trackOutput = outputStep.output as unknown as
@@ -108,9 +104,14 @@ export const aiGenerateAnswer = async ({
 			}
 			return trackOutput.text;
 		}
-		return outputText;
+		
+		// 2.c default tool
+		const xmtpActions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE});
+		await sendActions(xmtpContext, xmtpActions);
+		return;
 	}
 
 	// 3. no tool call, return the text
-	return response.text;
+	//return DEFAULT_RESPONSE_MESSAGE;
+	return DEFAULT_RESPONSE_MESSAGE;
 };
