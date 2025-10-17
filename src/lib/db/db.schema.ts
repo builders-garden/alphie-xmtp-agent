@@ -228,6 +228,8 @@ export const groupActivity = sqliteTable(
 		buyAmount: text("buy_amount").notNull(),
 		sellMarketCap: text("sell_market_cap").notNull(),
 		buyMarketCap: text("buy_market_cap").notNull(),
+		sellTokenPrice: text("sell_token_price").notNull(),
+		buyTokenPrice: text("buy_token_price").notNull(),
 		parentActivityId: text("parent_activity_id"), // auto reference for copy trading from the miniapp/xmtp chat
 		createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	},
