@@ -5,15 +5,15 @@ import {
 	QUEUES,
 	type UpdateUsersJobData,
 } from "../../../types/index.js";
-import { processAddUsersJob } from "../jobs/update-users.job.js";
+import { processUpdateUsersJob } from "../jobs/update-users.job.js";
 
-export const addUsersWorker = new Worker<UpdateUsersJobData, JobResult>(
+export const updateUsersWorker = new Worker<UpdateUsersJobData, JobResult>(
 	QUEUES.UPDATE_USERS_QUEUE,
 	async (job) => {
 		try {
 			console.log(`| update-users-worker | processing job #${job.id}`);
 
-			const result = await processAddUsersJob(job);
+			const result = await processUpdateUsersJob(job);
 
 			console.log(`| update-users-worker | completed job #${job.id}`);
 
@@ -35,31 +35,31 @@ export const addUsersWorker = new Worker<UpdateUsersJobData, JobResult>(
 	},
 );
 
-addUsersWorker.on("completed", (job) => {
+updateUsersWorker.on("completed", (job) => {
 	console.log(`✅ update-users-worker #${job.id} completed successfully`);
 });
 
-addUsersWorker.on("failed", (job, err) => {
+updateUsersWorker.on("failed", (job, err) => {
 	console.error(`❌ update-users-worker #${job?.id} failed:`, err);
 });
 
-addUsersWorker.on("progress", (job, progress) => {
+updateUsersWorker.on("progress", (job, progress) => {
 	console.log(`⏳ update-users-worker #${job.id} progress: ${progress}%`);
 });
 
-addUsersWorker.on("error", (err) => {
+updateUsersWorker.on("error", (err) => {
 	console.error("update-users-worker error:", err);
 });
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
 	console.log("SIGTERM received, closing update-users-worker...");
-	await addUsersWorker.close();
+	await updateUsersWorker.close();
 	console.log("SIGTERM update-users-worker closed");
 });
 
 process.on("SIGINT", async () => {
 	console.log("SIGINT received, closing update-users-worker...");
-	await addUsersWorker.close();
+	await updateUsersWorker.close();
 	console.log("SIGINT update-users-worker closed");
 });

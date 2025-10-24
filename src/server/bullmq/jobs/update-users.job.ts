@@ -23,10 +23,10 @@ const areSetsEqual = <T>(a: Set<T>, b: Set<T>): boolean => {
 };
 
 /**
- * Process add users job - add users to neynar webhook
+ * Process update users job - add/remove users to/from neynar webhook
  * @param job - The BullMQ job containing the processing request
  */
-export const processAddUsersJob = async (
+export const processUpdateUsersJob = async (
 	job: Job<UpdateUsersJobData>,
 ): Promise<JobResult> => {
 	const { addUsers: jobAddUsers, removeUsers: jobRemoveUsers } = job.data;

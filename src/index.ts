@@ -29,8 +29,8 @@ import { getXmtpActions, registerXmtpActions } from "./utils/index.js";
 // Import Bull jobs and workers to process jobs
 import "./server/bullmq/jobs/index.js";
 import {
-	addUsersWorker,
 	neynarWebhookWorker,
+	updateUsersWorker,
 } from "./server/bullmq/workers/index.js";
 import { verifyNeynarSignatureMiddleware } from "./server/middleware/auth.middleware.js";
 import type { RequestWithRawBody } from "./types/index.js";
@@ -124,7 +124,7 @@ async function main() {
 			// If is new group, send welcome message and actions
 			console.log("Sending welcome message to new group", group.id);
 			await ctx.conversation.send(WELCOME_MESSAGE);
-			const actions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE_2});
+			const actions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE_2 });
 			await ctx.conversation.send(actions, ContentTypeActions);
 		}
 	});
@@ -174,7 +174,7 @@ async function main() {
 
 		// Close BullMQ workers
 		try {
-			tasks.push(addUsersWorker.close());
+			tasks.push(updateUsersWorker.close());
 			tasks.push(neynarWebhookWorker.close());
 		} catch {}
 
