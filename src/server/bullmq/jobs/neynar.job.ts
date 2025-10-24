@@ -32,6 +32,7 @@ export const processNeynarWebhookJob = async (
 
 	console.log(
 		`[neynar-webhook-job] Starting job ${job.id} for user ${user.fid}`,
+		job,
 	);
 	await job.updateProgress(progress);
 
@@ -57,7 +58,7 @@ export const processNeynarWebhookJob = async (
 		const groups = await getGroupsTrackingUserByFarcasterFid(user.fid);
 		if (groups.length === 0) {
 			await job.updateProgress(100);
-			console.log("[neynar-webhook-job] No groups found");
+			console.log(`[neynar-webhook-job] No groups found for user ${user.fid}`);
 			return {
 				status: "success",
 				message: "No groups are tracking the given user",
