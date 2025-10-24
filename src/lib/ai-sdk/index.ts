@@ -1,9 +1,17 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import type { MessageContext } from "@xmtp/agent-sdk";
 import { generateText } from "ai";
-import { getXmtpActions, sendActions, sendConfirmation } from "../../utils/index.js";
+import {
+	getXmtpActions,
+	sendActions,
+	sendConfirmation,
+} from "../../utils/index.js";
 import { updateUsersToQueue } from "../../utils/queue.util.js";
-import { DEFAULT_ACTIONS_MESSAGE, DEFAULT_RESPONSE_MESSAGE, SYSTEM_PROMPT } from "../constants.js";
+import {
+	DEFAULT_ACTIONS_MESSAGE,
+	DEFAULT_RESPONSE_MESSAGE,
+	SYSTEM_PROMPT,
+} from "../constants.js";
 import { env } from "../env.js";
 import { tools } from "./tools.js";
 
@@ -21,25 +29,11 @@ const openai = createOpenAI({
  */
 export const aiGenerateAnswer = async ({
 	message,
-	//xmtpMessages,
-	//xmtpMembers,
-	//agentAddress,
 	xmtpContext,
 }: {
 	message: string;
-	//xmtpMessages: DecodedMessage[];
-	//xmtpMembers: GroupMember[];
-	//agentAddress: string;
 	xmtpContext: MessageContext;
-}) => {
-	/*
-	const modelMessages = convertXmtpToAiModelMessages({
-		messages: xmtpMessages,
-		agentInboxId: xmtpContext.client.inboxId,
-		agentAddress,
-		xmtpMembers,
-	});
-	*/
+}): Promise<{ answer?: string; isReply: boolean }> => {
 	// 1. generate text with ai
 	const response = await generateText({
 		model: openai("gpt-4.1-mini"),
@@ -58,14 +52,6 @@ export const aiGenerateAnswer = async ({
 		console.log("Output Text:", outputText);
 
 		const toolName = outputStep.toolName;
-		/*
-		// 2.a help tool
-		if (toolName === "alphie_help") {
-			const xmtpActions = getXmtpActions();
-			await sendActions(xmtpContext, xmtpActions);
-			return outputText;
-		}
-		*/
 		// 2.b track tool
 		if (toolName === "alphie_track") {
 			const trackOutput = outputStep.output as unknown as
@@ -101,17 +87,17 @@ export const aiGenerateAnswer = async ({
 					},
 					onNo: async (ctx) => await ctx.sendText("Ok, operation cancelled"),
 				});
+				return { answer: trackOutput.text, isReply: true };
 			}
-			return trackOutput.text;
+			return { answer: trackOutput.text, isReply: true };
 		}
-		
+
 		// 2.c default tool
-		const xmtpActions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE});
+		const xmtpActions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE });
 		await sendActions(xmtpContext, xmtpActions);
-		return;
+		return { answer: undefined, isReply: true };
 	}
 
 	// 3. no tool call, return the text
-	//return DEFAULT_RESPONSE_MESSAGE;
-	return DEFAULT_RESPONSE_MESSAGE;
+	return { answer: DEFAULT_RESPONSE_MESSAGE, isReply: true };
 };

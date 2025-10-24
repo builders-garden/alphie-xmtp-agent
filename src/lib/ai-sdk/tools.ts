@@ -55,12 +55,13 @@ export const tools = {
 					username: user.username,
 					userId: newUser.id,
 				},
-				text: `Confirm that you want to track this farcaster user https://farcaster.xyz/${user.username} (fid ${user.fid})`,
+				text: `User to track: https://farcaster.xyz/${user.username} (fid ${user.fid})`,
 			};
 		},
 	}),
 	alphie_default: tool({
-		description: "Default response when the request is not related to the tracking of new users",
+		description:
+			"Default response when the request is not related to the tracking of new users",
 		inputSchema: z.object({}),
 		execute: async () => {
 			return HELP_HINT_MESSAGE;

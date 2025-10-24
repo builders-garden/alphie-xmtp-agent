@@ -169,15 +169,16 @@ export const handleXmtpMessage = async (
 				//const xmtpMembers = await ctx.conversation.members();
 
 				// generate answer with tools
-				const answer = await aiGenerateAnswer({
+				const { answer, isReply } = await aiGenerateAnswer({
 					message: messageContent,
 					xmtpContext: ctx,
-					//xmtpMessages,
-					//xmtpMembers,
-					//agentAddress,
 				});
 				if (answer) {
-					await ctx.sendTextReply(answer);
+					if (isReply) {
+						await ctx.sendTextReply(answer);
+					} else {
+						await ctx.sendText(answer);
+					}
 				}
 			}
 		}
