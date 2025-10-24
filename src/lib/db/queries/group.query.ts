@@ -3,7 +3,7 @@ import {
 	IdentifierKind,
 	type Group as XmtpGroup,
 } from "@xmtp/agent-sdk";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { ulid } from "ulid";
 import { updateUsersToQueue } from "../../../utils/queue.util.js";
 import { XMTP_AGENTS } from "../../xmtp-agents.js";
@@ -220,4 +220,26 @@ export const getOrCreateGroupByConversationId = async (
 		return { group: newGroup, isNew: true };
 	}
 	return { group, isNew: false };
+};
+
+/**
+ * Resolve an input identifier (group id or conversation id) to a concrete group id
+ * @param idOrConversationId - Either the `group.id` (ULID) or `group.conversationId`
+ * @returns The resolved `group.id` or null if not found
+ */
+export const resolveGroupId = async (
+	idOrConversationId: string,
+): Promise<string | null> => {
+	if (!idOrConversationId) return null;
+	// Try by group.id first
+	const byId = await db.query.group.findFirst({
+		where: or(
+			eq(group.id, idOrConversationId),
+			eq(group.conversationId, idOrConversationId),
+		),
+	});
+	if (byId) {
+		return byId.id;
+	}
+	return null;
 };

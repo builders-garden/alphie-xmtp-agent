@@ -1,4 +1,5 @@
 import type { Job } from "bullmq";
+import { resolveGroupId } from "../../../lib/db/queries/group.query.js";
 import {
 	addUsersToGroupTrackings,
 	removeUsersFromGroupTrackings,
@@ -64,10 +65,20 @@ export const processAddUsersJob = async (
 		const removeUsersInput = jobRemoveUsers ?? [];
 
 		// Prepare tracking adds for all requested addUsers (independent of webhook state)
-		const trackingAdds = addUsersInput.map((u) => ({
+		const trackingAddsRaw = addUsersInput.map((u) => ({
 			groupId: u.groupId ?? "",
 			userId: u.userId,
 		}));
+
+		// Resolve group ids: input may be a DB group.id (ULID) or a conversationId
+		const trackingAddsResolved = (
+			await Promise.all(
+				trackingAddsRaw.map(async (row) => {
+					const resolved = await resolveGroupId(row.groupId);
+					return resolved ? { groupId: resolved, userId: row.userId } : null;
+				}),
+			)
+		).filter((r): r is { groupId: string; userId: string } => r !== null);
 
 		// Prepare removal data
 		const removeFidsSet = new Set<number>(removeUsersInput.map((u) => u.fid));
@@ -78,6 +89,15 @@ export const processAddUsersJob = async (
 			const current = removalsByGroup.get(r.groupId) ?? [];
 			current.push(r.userId);
 			removalsByGroup.set(r.groupId, current);
+		}
+
+		// Resolve removal group ids as well
+		const removalsByResolvedGroup = new Map<string, string[]>();
+		for (const [maybeGroupId, userIds] of removalsByGroup.entries()) {
+			const resolved = await resolveGroupId(maybeGroupId);
+			if (!resolved) continue;
+			const list = removalsByResolvedGroup.get(resolved) ?? [];
+			removalsByResolvedGroup.set(resolved, list.concat(userIds));
 		}
 
 		// Calculate merged FIDs to apply to the webhook directly from inputs
@@ -97,18 +117,18 @@ export const processAddUsersJob = async (
 
 		if (setsEqual) {
 			// Webhook subscriptions unchanged; still ensure DB tracking updates
-			if (trackingAdds.length > 0) {
-				await addUsersToGroupTrackings(trackingAdds);
+			if (trackingAddsResolved.length > 0) {
+				await addUsersToGroupTrackings(trackingAddsResolved);
 				console.log(
-					`[update-users-job] Ensured group trackings for users ${trackingAdds.map((u) => u.userId)}`,
+					`[update-users-job] Ensured group trackings for users ${trackingAddsResolved.map((u) => u.userId)}`,
 				);
 			}
 			if (hasRemovals) {
-				for (const [groupId, userIds] of removalsByGroup.entries()) {
+				for (const [groupId, userIds] of removalsByResolvedGroup.entries()) {
 					await removeUsersFromGroupTrackings(groupId, userIds);
 				}
 				console.log(
-					`[update-users-job] Removed users from group trackings ${Array.from(removalsByGroup.values()).flat()}`,
+					`[update-users-job] Removed users from group trackings ${Array.from(removalsByResolvedGroup.values()).flat()}`,
 				);
 			}
 			await job.updateProgress(100);
@@ -134,20 +154,20 @@ export const processAddUsersJob = async (
 			);
 			await job.updateProgress(80);
 			// add users to group trackings (for all addUsers requested)
-			if (trackingAdds.length > 0) {
-				await addUsersToGroupTrackings(trackingAdds);
+			if (trackingAddsResolved.length > 0) {
+				await addUsersToGroupTrackings(trackingAddsResolved);
 				console.log(
-					`[update-users-job] Added users to group trackings ${trackingAdds.map((u) => u.userId)}`,
+					`[update-users-job] Added users to group trackings ${trackingAddsResolved.map((u) => u.userId)}`,
 				);
 			}
 
 			// remove users from group trackings (if any)
 			if (hasRemovals) {
-				for (const [groupId, userIds] of removalsByGroup.entries()) {
+				for (const [groupId, userIds] of removalsByResolvedGroup.entries()) {
 					await removeUsersFromGroupTrackings(groupId, userIds);
 				}
 				console.log(
-					`[update-users-job] Removed users from group trackings ${Array.from(removalsByGroup.values()).flat()}`,
+					`[update-users-job] Removed users from group trackings ${Array.from(removalsByResolvedGroup.values()).flat()}`,
 				);
 			}
 			await job.updateProgress(100);
