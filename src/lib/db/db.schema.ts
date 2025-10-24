@@ -225,7 +225,9 @@ export const groupActivity = sqliteTable(
 			.notNull()
 			.references(() => tokens.id, { onDelete: "cascade" }),
 		sellAmount: text("sell_amount").notNull(),
+		sellAmountUsd: text("sell_amount_usd").notNull().default("0"),
 		buyAmount: text("buy_amount").notNull(),
+		buyAmountUsd: text("buy_amount_usd").notNull().default("0"),
 		sellMarketCap: text("sell_market_cap").notNull(),
 		buyMarketCap: text("buy_market_cap").notNull(),
 		sellTokenPrice: text("sell_token_price").notNull(),
@@ -364,3 +366,22 @@ export const groupTrackedUserRelations = relations(
 		}),
 	}),
 );
+
+export const groupActivityRelations = relations(groupActivity, ({ one }) => ({
+	group: one(group, {
+		fields: [groupActivity.groupId],
+		references: [group.id],
+	}),
+	user: one(user, {
+		fields: [groupActivity.userId],
+		references: [user.id],
+	}),
+	sellToken: one(tokens, {
+		fields: [groupActivity.sellTokenId],
+		references: [tokens.id],
+	}),
+	buyToken: one(tokens, {
+		fields: [groupActivity.buyTokenId],
+		references: [tokens.id],
+	}),
+}));
