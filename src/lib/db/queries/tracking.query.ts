@@ -101,7 +101,9 @@ export const countGroupsTrackingUserByFarcasterFid = async (fid: number) => {
  * @returns The groups tracking the user
  */
 export const getGroupsTrackingUserByUserId = async (userId: string) => {
-	if (!userId) return [];
+	if (!userId) {
+		return [];
+	}
 	const data = await db.query.groupTrackedUser.findMany({
 		where: eq(groupTrackedUser.userId, userId),
 		with: {
@@ -117,8 +119,16 @@ export const getGroupsTrackingUserByUserId = async (userId: string) => {
  * @returns The groups tracking the user
  */
 export const getGroupsTrackingUserByFarcasterFid = async (fid: number) => {
-	if (fid < 0) return [];
+	if (fid < 0) {
+		console.error(`[getGroupsTrackingUserByFarcasterFid] Invalid fid ${fid}`);
+		return [];
+	}
 	const user = await getUserByFarcasterFid(fid);
-	if (!user) return [];
+	if (!user) {
+		console.error(
+			`[getGroupsTrackingUserByFarcasterFid] User not found for fid ${fid}`,
+		);
+		return [];
+	}
 	return getGroupsTrackingUserByUserId(user.id);
 };

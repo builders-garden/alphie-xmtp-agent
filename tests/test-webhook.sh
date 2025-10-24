@@ -3,7 +3,7 @@
 source .env
 
 # Simulate Neynar trade.created webhook (sell 1 USDC on Base)
-curl -X POST http://localhost:$PORT/api/v1/neynar/webhooks \
+curl -X POST $BACKEND_URL/api/v1/neynar/webhooks \
   -H "Content-Type: application/json" \
   -d '{
     "type": "trade.created",
