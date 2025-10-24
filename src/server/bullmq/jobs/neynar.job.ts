@@ -32,7 +32,7 @@ export const processNeynarWebhookJob = async (
 
 	console.log(
 		`[neynar-webhook-job] Starting job ${job.id} for user ${user.fid}`,
-		job,
+		job.data,
 	);
 	await job.updateProgress(progress);
 
