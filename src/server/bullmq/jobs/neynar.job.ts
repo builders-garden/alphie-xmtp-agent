@@ -101,7 +101,7 @@ export const processNeynarWebhookJob = async (
 			// send copy trade action to the group chat
 			await conversation.send(action, ContentTypeActions);
 			await conversation.send(
-				`See more details here ${env.APP_URL}/t/${transaction.transactionHash}`,
+				`See more details here ${env.APP_URL}/g/${group.groupId}/tx/${transaction.transactionHash}`,
 			);
 			console.log(
 				`Copy trade action sent to the group chat ${conversation.id}`,
