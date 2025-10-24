@@ -1,6 +1,15 @@
 import type { Job } from "bullmq";
+import { ulid } from "ulid";
 import type { Address } from "viem";
-import { getGroupsTrackingUserByFarcasterFid } from "../../../lib/db/queries/index.js";
+import { saveActivityForMultipleGroups } from "../../../lib/db/queries/group-activity.query.js";
+import {
+	getGroupsTrackingUserByFarcasterFid,
+	getUserByFarcasterFid,
+} from "../../../lib/db/queries/index.js";
+import {
+	getTokenInfoFromDb,
+	saveTokenInDb,
+} from "../../../lib/db/queries/tokens.query.js";
 import { env } from "../../../lib/env.js";
 import { fetchUserFromNeynarByFid } from "../../../lib/neynar.js";
 import { createXmtpAgent } from "../../../lib/xmtp/agent.js";
@@ -35,6 +44,14 @@ export const processNeynarWebhookJob = async (
 				error: "Unable to get neynar user",
 			};
 		}
+		const userInDb = await getUserByFarcasterFid(user.fid);
+		if (!userInDb) {
+			console.error("❌ Unable to get user in db");
+			return {
+				status: "failed",
+				error: "Unable to get user in db",
+			};
+		}
 
 		// get groups that are tracking the user
 		const groups = await getGroupsTrackingUserByFarcasterFid(user.fid);
@@ -63,14 +80,77 @@ export const processNeynarWebhookJob = async (
 		await job.updateProgress(progress);
 
 		// build copy trade action
-		const token = await getTokenInfo({
-			sellTokenAddress: transaction.sellToken,
-			buyTokenAddress: transaction.buyToken,
+		let sellToken = await getTokenInfoFromDb({
+			tokenAddress: transaction.sellToken,
 			chainId: transaction.chainId,
 		});
+		let buyToken = await getTokenInfoFromDb({
+			tokenAddress: transaction.buyToken,
+			chainId: transaction.chainId,
+		});
+
+		// get token info from onchain and save in db
+		if (!sellToken || !buyToken) {
+			const onchainTokenInfo = await getTokenInfo({
+				sellTokenAddress: transaction.sellToken,
+				buyTokenAddress: transaction.buyToken,
+				chainId: transaction.chainId,
+			});
+
+			if (!sellToken) {
+				sellToken = await saveTokenInDb({
+					id: ulid(),
+					address: transaction.sellToken,
+					chainId: transaction.chainId,
+					symbol: onchainTokenInfo.sellSymbol,
+					name: onchainTokenInfo.sellSymbol ?? "Unknown",
+					decimals: onchainTokenInfo.tokenDecimals ?? 18,
+				});
+			}
+
+			if (!buyToken) {
+				buyToken = await saveTokenInDb({
+					id: ulid(),
+					address: transaction.buyToken,
+					chainId: transaction.chainId,
+					symbol: onchainTokenInfo.buySymbol,
+					name: onchainTokenInfo.buySymbol ?? "Unknown",
+					decimals: onchainTokenInfo.tokenDecimals ?? 18,
+				});
+			}
+		}
+
+		// if still no token info, return error
+		if (!sellToken || !buyToken) {
+			console.error("❌ Unable to get token info");
+			return {
+				status: "failed",
+				error: "Unable to get token info",
+			};
+		}
 		const sellAmount = Number.parseFloat(transaction.sellAmount).toFixed(2);
 
-		const actionMessage = `Copy trade @${neynarUser.username}: Swap ${sellAmount} ${token.sellSymbol} for ${token.buySymbol}`;
+		const actionMessage = `Copy trade @${neynarUser.username}: Swap ${sellAmount} ${sellToken.symbol} for ${buyToken.symbol}`;
+
+		// save group activity in db
+		const activities = groups.map((group) => ({
+			id: ulid(),
+			groupId: group.groupId,
+			userId: userInDb.id,
+			chainId: transaction.chainId,
+			txHash: transaction.transactionHash,
+			sellTokenId: sellToken.id,
+			buyTokenId: buyToken.id,
+			sellAmount: sellAmount,
+			buyAmount: "0",
+			sellMarketCap: "0", // TODO: get market cap from neynar
+			buyMarketCap: "0", // TODO: get market cap from neynar
+			sellTokenPrice: "0", // TODO: get price from neynar
+			buyTokenPrice: "0", // TODO: get price from neynar
+		}));
+		await saveActivityForMultipleGroups(activities);
+
+		// build copy trade action
 		const action = getXmtpCopyTradeAction({
 			actionMessage,
 			transaction,
