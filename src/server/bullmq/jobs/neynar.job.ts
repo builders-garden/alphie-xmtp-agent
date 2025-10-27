@@ -1,7 +1,10 @@
 import type { Job } from "bullmq";
 import { ulid } from "ulid";
 import type { Address } from "viem";
-import { saveActivityForMultipleGroups } from "../../../lib/db/queries/group-activity.query.js";
+import {
+	getActivityByTxHash,
+	saveActivityForMultipleGroups,
+} from "../../../lib/db/queries/group-activity.query.js";
 import {
 	getGroupsTrackingUserByFarcasterFid,
 	getUserByFarcasterFid,
@@ -11,7 +14,6 @@ import {
 	saveTokenInDb,
 } from "../../../lib/db/queries/tokens.query.js";
 import { env } from "../../../lib/env.js";
-import { fetchUserFromNeynarByFid } from "../../../lib/neynar.js";
 import { createXmtpAgent } from "../../../lib/xmtp/agent.js";
 import {
 	ContentTypeActions,
@@ -37,14 +39,23 @@ export const processNeynarWebhookJob = async (
 	await job.updateProgress(progress);
 
 	try {
-		const neynarUser = await fetchUserFromNeynarByFid(user.fid);
-		if (!neynarUser) {
-			console.error("❌ Unable to get neynar user");
+		// check if activity already exists in db
+		const activity = await getActivityByTxHash(
+			transaction.transactionHash,
+			transaction.chainId,
+		);
+		if (activity) {
+			await job.updateProgress(100);
+			console.log(
+				`[neynar-webhook-job] Activity already exists in db for tx hash ${transaction.transactionHash} on chain ${transaction.chainId}`,
+			);
 			return {
-				status: "failed",
-				error: "Unable to get neynar user",
+				status: "success",
+				message: `Activity already exists in db for tx hash ${transaction.transactionHash} on chain ${transaction.chainId}`,
 			};
 		}
+
+		// get user in db
 		const userInDb = await getUserByFarcasterFid(user.fid);
 		if (!userInDb) {
 			console.error("❌ Unable to get user in db");
@@ -131,7 +142,7 @@ export const processNeynarWebhookJob = async (
 		}
 		const sellAmount = Number.parseFloat(transaction.sellAmount).toFixed(2);
 
-		const actionMessage = `Copy trade @${neynarUser.username}: Swap ${sellAmount} ${sellToken.symbol} for ${buyToken.symbol}`;
+		const actionMessage = `Copy trade @${userInDb.name}: Swap ${sellAmount} ${sellToken.symbol} for ${buyToken.symbol}`;
 
 		// save group activity in db
 		const activities = groups.map((group) => ({
@@ -202,7 +213,7 @@ export const processNeynarWebhookJob = async (
 			message: "Copy trade handled successfully",
 		};
 	} catch (error) {
-		console.error(`[neynar-webhook-job] Job ${job.id} failed:`, error);
+		console.error("[neynar-webhook-job] Job $job.idfailed:", error);
 		throw error;
 	}
 };

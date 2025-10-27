@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import { type CreateGroupActivity, groupActivity } from "../db.schema.js";
 import { db } from "../index.js";
 
@@ -21,4 +22,19 @@ export const saveActivityForMultipleGroups = async (
 ) => {
 	const activities = await db.insert(groupActivity).values(data).returning();
 	return activities;
+};
+
+/**
+ * Get activity by tx hash
+ * @param txHash - The tx hash
+ * @returns The activity
+ */
+export const getActivityByTxHash = async (txHash: string, chainId: number) => {
+	const activity = await db.query.groupActivity.findFirst({
+		where: and(
+			eq(groupActivity.txHash, txHash),
+			eq(groupActivity.chainId, chainId),
+		),
+	});
+	return activity;
 };
