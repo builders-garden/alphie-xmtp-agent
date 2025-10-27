@@ -9,7 +9,7 @@ curl -X POST $BACKEND_URL/api/v1/neynar/webhooks \
     "type": "trade.created",
     "data": {
       "object": "trade",
-      "trader": { "object": "user_dehydrated", "fid": 189636, "score": 0.9 },
+      "trader": { "object": "user_dehydrated", "fid": 4461, "score": 0.9 },
       "pool": { "object": "pool", "address": "0x0000000000000000000000000000000000000000" },
       "transaction": {
         "hash": "0x3d4d44b40b5bbbd659c64ce16277f5a0ef2390afc9126b4932de7bb320769649",

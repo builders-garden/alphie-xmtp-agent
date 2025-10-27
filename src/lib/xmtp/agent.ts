@@ -6,6 +6,7 @@ import {
 } from "@xmtp/agent-sdk";
 import type { GroupUpdated } from "@xmtp/content-type-group-updated";
 import { GroupUpdatedCodec } from "@xmtp/content-type-group-updated";
+import { MarkdownCodec } from "@xmtp/content-type-markdown";
 import type { Reaction } from "@xmtp/content-type-reaction";
 import { ReactionCodec } from "@xmtp/content-type-reaction";
 import type { RemoteAttachment } from "@xmtp/content-type-remote-attachment";
@@ -61,6 +62,7 @@ export const createXmtpAgent = async () => {
 			new IntentCodec(),
 			new ReactionCodec(),
 			new RemoteAttachmentCodec(),
+			new MarkdownCodec(),
 		],
 	});
 };
