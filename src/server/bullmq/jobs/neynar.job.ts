@@ -111,7 +111,7 @@ export const processNeynarWebhookJob = async (
 
 			if (!sellToken) {
 				sellToken = await saveTokenInDb({
-					id: ulid(),
+					id: `eip155:${transaction.chainId}:${transaction.sellToken}`,
 					address: transaction.sellToken,
 					chainId: transaction.chainId,
 					symbol: onchainTokenInfo.sellSymbol,
@@ -122,7 +122,7 @@ export const processNeynarWebhookJob = async (
 
 			if (!buyToken) {
 				buyToken = await saveTokenInDb({
-					id: ulid(),
+					id: `eip155:${transaction.chainId}:${transaction.buyToken}`,
 					address: transaction.buyToken,
 					chainId: transaction.chainId,
 					symbol: onchainTokenInfo.buySymbol,
