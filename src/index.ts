@@ -111,7 +111,6 @@ async function main() {
 	});
 
 	xmtpAgent.on("group", async (ctx) => {
-		console.log("Group received event");
 		console.log("Group received event", JSON.stringify(ctx.conversation));
 		const conversationId = ctx.conversation.id;
 		const { group, isNew } = await getOrCreateGroupByConversationId(

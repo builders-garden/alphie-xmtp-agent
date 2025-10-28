@@ -100,6 +100,7 @@ export const handleXmtpMessage = async (
 		// Auto-respond to DM messages
 		if (ctx.isDm()) {
 			console.log("✓ Handling DM message");
+			await thinkingContext.helpers.addThinkingEmoji();
 			await ctx.sendText(DM_RESPONSE_MESSAGE);
 			return;
 		}
