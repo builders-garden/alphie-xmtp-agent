@@ -144,6 +144,7 @@ export const handleXmtpMessage = async (
 			const shouldRespond = await shouldRespondToMessage({
 				message: ctx.message,
 				agentInboxId: ctx.client.inboxId,
+				agentAddress,
 				client: ctx.client,
 			});
 			if (shouldRespond) {

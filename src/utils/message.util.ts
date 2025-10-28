@@ -200,10 +200,12 @@ export function containsAgentMention(text: string): boolean {
 export async function shouldRespondToMessage({
 	message,
 	agentInboxId,
+	agentAddress,
 	client,
 }: {
 	message: DecodedMessage;
 	agentInboxId: string;
+	agentAddress: string;
 	client: Client<
 		| string
 		| IntentContent
@@ -231,12 +233,32 @@ export async function shouldRespondToMessage({
 	}
 
 	// Check if message contains any trigger words/phrases or a mention of the agent
-	const hasTrigger =
-		AGENT_TRIGGERS.some((trigger) =>
-			lowerMessage.includes(trigger.toLowerCase()),
-		) || containsAgentMention(messageContent);
+	const hasTrigger = AGENT_TRIGGERS.some((trigger) =>
+		lowerMessage.includes(trigger.toLowerCase()),
+	);
+	if (hasTrigger) {
+		return true;
+	}
+	const hasAgentMention = containsAgentMention(messageContent);
+	if (hasAgentMention) {
+		return true;
+	}
 
-	return hasTrigger;
+	// check if it contains the shortned agent address like this (0x2c3e…69aa)
+	const agentAddresses = [
+		`${agentAddress.slice(0, 6)}…${agentAddress.slice(-4)}`,
+		`${agentAddress.slice(0, 6)}...${agentAddress.slice(-4)}`,
+		`${agentAddress.slice(0, 6)}…${agentAddress.slice(-4)}`.toLowerCase(),
+		`${agentAddress.slice(0, 6)}...${agentAddress.slice(-4)}`.toLowerCase(),
+	];
+	const hasShortenedAgentAddress = agentAddresses.some((address) =>
+		messageContent.includes(address),
+	);
+	if (hasShortenedAgentAddress) {
+		return true;
+	}
+
+	return false;
 }
 
 /**
