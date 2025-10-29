@@ -4,6 +4,13 @@ import type { RequestWithRawBody } from "../../types/index.js";
 import { verifyNeynarSignature } from "../../utils/hmac.util.js";
 import { response } from "./response.js";
 
+/**
+ * Verify a Neynar signature
+ * @param req - The request object
+ * @param _res - The response object
+ * @param next - The next function
+ * @returns void or Promise<void>
+ */
 export const verifyNeynarSignatureMiddleware = (
 	req: RequestWithRawBody,
 	_res: Response,
@@ -37,6 +44,35 @@ export const verifyNeynarSignatureMiddleware = (
 		console.log("Unauthorized: Invalid signature");
 		response.unauthorized({
 			message: "Unauthorized: Invalid signature",
+		});
+		return;
+	}
+
+	next();
+};
+
+/**
+ *
+ * @param req - The request object
+ * @param _res - The response object
+ * @param next - The next function
+ * @returns void or Promise<void>
+ */
+export const verifyApiKeyMiddleware = (
+	req: RequestWithRawBody,
+	_res: Response,
+	next: NextFunction,
+): void | Promise<void> => {
+	if (env.NODE_ENV === "development") {
+		next();
+		return;
+	}
+
+	const apiKey = req.header("x-api-secret");
+	if (!apiKey || apiKey !== env.API_KEY_SECRET) {
+		console.log("Unauthorized: Invalid or missing API secret");
+		response.unauthorized({
+			message: "Unauthorized: Invalid or missing API secret",
 		});
 		return;
 	}

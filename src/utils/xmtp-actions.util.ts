@@ -13,12 +13,7 @@ import {
 } from "../lib/constants.js";
 import { env } from "../lib/env.js";
 import type { HandleCopyTradeSchema } from "../types/index.js";
-import {
-	getEstimatedGasFee,
-	getEthBalance,
-	getTokenBalance,
-	swapERC20,
-} from "../utils/index.js";
+import { getTransactionData, swapERC20 } from "../utils/index.js";
 import {
 	ActionBuilder,
 	buildCopyTradeAction,
@@ -125,19 +120,13 @@ export const getXmtpCopyTradeAction = ({
 			);
 
 			// check if a user has enough balance of the sell token
-			const [tokenBalance, ethBalance, gasEstimate] = await Promise.all([
-				getTokenBalance({
+			const { tokenBalance, ethBalance, gasEstimate } =
+				await getTransactionData({
 					sellTokenAddress: transaction.sellToken,
 					buyTokenAddress: transaction.buyToken,
-					address: senderAddress as Address,
+					senderAddress: senderAddress as Address,
 					chainId: transaction.chainId,
-				}),
-				getEthBalance({
-					address: senderAddress as Address,
-					chainId: transaction.chainId,
-				}),
-				getEstimatedGasFee({ chainId: transaction.chainId }),
-			]);
+				});
 			let sellAmount = Number.parseFloat(transaction.sellAmount);
 			let sellAmountInDecimals = parseUnits(
 				transaction.sellAmount,

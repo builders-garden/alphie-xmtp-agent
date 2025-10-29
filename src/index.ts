@@ -23,6 +23,7 @@ import {
 } from "./server/middleware/error.middleware.js";
 import responseMiddleware from "./server/middleware/response.js";
 import neynarRoutes from "./server/routes/neynar.route.js";
+import trackingsRoutes from "./server/routes/trackings.route.js";
 import { ContentTypeActions } from "./types/index.js";
 import { getXmtpActions, registerXmtpActions } from "./utils/index.js";
 
@@ -32,7 +33,10 @@ import {
 	neynarWebhookWorker,
 	updateUsersWorker,
 } from "./server/bullmq/workers/index.js";
-import { verifyNeynarSignatureMiddleware } from "./server/middleware/auth.middleware.js";
+import {
+	verifyApiKeyMiddleware,
+	verifyNeynarSignatureMiddleware,
+} from "./server/middleware/auth.middleware.js";
 import type { RequestWithRawBody } from "./types/index.js";
 
 async function main() {
@@ -82,6 +86,7 @@ async function main() {
 	});
 
 	app.use("/api/v1/neynar", verifyNeynarSignatureMiddleware, neynarRoutes);
+	app.use("/api/v1/trackings", verifyApiKeyMiddleware, trackingsRoutes);
 
 	// Use custom middlewares for handling 404 and errors
 	app.use(handleNotFound);

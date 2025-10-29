@@ -6,16 +6,20 @@ export enum QUEUES {
 	UPDATE_USERS_QUEUE = "update-users-queue",
 }
 
-export interface QueueUser {
-	fid: number;
-	userId: string;
-	groupId?: string;
-}
+export const queueUserSchema = z.object({
+	fid: z.number(),
+	userId: z.string(),
+	groupId: z.string().optional(),
+});
 
-export interface UpdateUsersJobData {
-	addUsers: QueueUser[];
-	removeUsers: QueueUser[];
-}
+export type QueueUser = z.infer<typeof queueUserSchema>;
+
+export const updateUsersJobDataSchema = z.object({
+	addUsers: z.array(queueUserSchema),
+	removeUsers: z.array(queueUserSchema),
+});
+
+export type UpdateUsersJobData = z.infer<typeof updateUsersJobDataSchema>;
 
 export interface NeynarWebhookJobData {
 	user: HandleCopyTradeSchema["user"];
