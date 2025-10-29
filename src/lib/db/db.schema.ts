@@ -1,4 +1,3 @@
-import type { MiniAppNotificationDetails } from "@farcaster/miniapp-sdk";
 import { relations, sql } from "drizzle-orm";
 import {
 	foreignKey,
@@ -8,6 +7,7 @@ import {
 	text,
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import type { FarcasterNotificationDetails } from "../../types/farcaster.type.js";
 
 /**
  * Better Auth Tables
@@ -20,6 +20,10 @@ export const user = sqliteTable("user", {
 		.default(false)
 		.notNull(),
 	image: text("image"),
+	role: text("role"),
+	banned: integer("banned", { mode: "boolean" }).default(false),
+	banReason: text("ban_reason"),
+	banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),
@@ -38,6 +42,7 @@ export const session = sqliteTable("session", {
 	userId: text("user_id")
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
+	impersonatedBy: text("impersonated_by"),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),
@@ -116,7 +121,9 @@ export const farcaster = sqliteTable("farcaster", {
 	avatarUrl: text("avatar_url"),
 	notificationDetails: text("notification_details", {
 		mode: "json",
-	}).$type<MiniAppNotificationDetails | null>(),
+	})
+		.$type<FarcasterNotificationDetails[]>()
+		.default([]),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),
@@ -300,8 +307,6 @@ export const userRelations = relations(user, ({ many }) => ({
 	walletAddresses: many(walletAddress),
 	farcasters: many(farcaster),
 	groupMembers: many(groupMember),
-	trackedInGroups: many(groupTrackedUser),
-	trackingRequests: many(groupTrackedUser),
 	activities: many(groupActivity),
 }));
 
