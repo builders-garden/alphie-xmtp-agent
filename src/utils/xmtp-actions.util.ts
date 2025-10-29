@@ -102,19 +102,15 @@ export const getXmtpCopyTradeAction = ({
 		onCopyTrade: async (ctx) => {
 			const senderAddress = await ctx.getSenderAddress();
 			if (!senderAddress) {
-				console.error("❌ Unable to get sender address");
-				await ctx.sendText("❌ Unable to get sender address");
+				const message = "❌ Unable to get sender address";
+				console.error(message);
+				await ctx.sendText(message);
 				return;
 			}
 			const senderInboxId = await ctx.client.getInboxIdByIdentifier({
 				identifier: senderAddress as Address,
 				identifierKind: IdentifierKind.Ethereum,
 			});
-			if (!senderInboxId) {
-				console.error("❌ Unable to get sender inbox id");
-				await ctx.sendText("❌ Unable to get sender inbox id");
-				return;
-			}
 			console.log(
 				`Copy trade of ${transaction.transactionHash} on ${transaction.chainId}`,
 			);
@@ -159,7 +155,7 @@ export const getXmtpCopyTradeAction = ({
 			);
 
 			if (!hasEnoughEth) {
-				const message = `❌ User does not have enough ETH on chain ${transaction.chainId}`;
+				const message = `❌ User does not have enough ETH on chain ${transaction.chainId} for wallet ${senderAddress}`;
 				console.error(message);
 				await ctx.sendText(message);
 				return;
@@ -168,7 +164,7 @@ export const getXmtpCopyTradeAction = ({
 			if (!hasEnoughToken) {
 				// if user has no balance, return
 				if (!hasSomeToken) {
-					const message = "❌ User does not have enough balance";
+					const message = `❌ User does not have enough balance of ${tokenBalance.sellSymbol} ${transaction.sellToken} for wallet ${senderAddress}`;
 					console.error(message);
 					await ctx.sendText(message);
 					return;
@@ -187,8 +183,8 @@ export const getXmtpCopyTradeAction = ({
 				agentAddress: agentAddress,
 			});
 			if (quote.status === "nok") {
-				const message = `❌ Unable to get quote: ${quote.error}`;
-				console.error(message);
+				const message = `❌ Unable to get quote from 0x api for the swap of ${tokenBalance.sellSymbol} to ${tokenBalance.buySymbol} on chain ${transaction.chainId} for wallet ${senderAddress}`;
+				console.error(`${message} error ${quote.error}`);
 				await ctx.sendText(message);
 				return;
 			}
@@ -212,6 +208,17 @@ export const getXmtpCopyTradeAction = ({
 			});
 
 			// send swap ERC20 calls via dm
+			if (!senderInboxId) {
+				console.warn(
+					"⚠️ Unable to get sender inbox id, sending to conversation",
+				);
+				await ctx.conversation.send(
+					walletSendCalls as unknown as WalletSendCallsParams,
+					ContentTypeWalletSendCalls,
+				);
+				return;
+			}
+
 			const dm = await ctx.client.conversations.newDm(senderInboxId);
 			await dm.send(
 				walletSendCalls as unknown as WalletSendCallsParams,

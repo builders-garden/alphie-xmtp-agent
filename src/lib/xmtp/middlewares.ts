@@ -26,12 +26,9 @@ export const inlineActionsMiddleware: AgentMiddleware = async (ctx, next) => {
 				await handler(ctx);
 			} catch (error) {
 				console.error("❌ Error in action handler:", error);
-				await ctx.sendText(
-					`❌ Error: ${error instanceof Error ? error.message : String(error)}`,
-				);
 			}
 		} else {
-			await ctx.sendText(`❌ Unknown action: ${intentContent.actionId}`);
+			console.error("❌ Unknown action:", intentContent.actionId);
 		}
 		return;
 	}

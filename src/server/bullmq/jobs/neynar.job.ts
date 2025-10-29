@@ -47,7 +47,7 @@ export const processNeynarWebhookJob = async (
 		if (activity) {
 			await job.updateProgress(100);
 			console.log(
-				`[neynar-webhook-job] Activity already exists in db for tx hash ${transaction.transactionHash} on chain ${transaction.chainId}`,
+				`[neynar-webhook-job] job ${job.id} Activity already exists in db for tx hash ${transaction.transactionHash} on chain ${transaction.chainId}`,
 			);
 			return {
 				status: "success",
@@ -58,7 +58,9 @@ export const processNeynarWebhookJob = async (
 		// get user in db
 		const userInDb = await getUserByFarcasterFid(user.fid);
 		if (!userInDb) {
-			console.error("❌ Unable to get user in db");
+			console.error(
+				`[neynar-webhook-job] job ${job.id} ❌ Unable to get user in db`,
+			);
 			return {
 				status: "failed",
 				error: "Unable to get user in db",
@@ -69,7 +71,9 @@ export const processNeynarWebhookJob = async (
 		const groups = await getGroupsTrackingUserByFarcasterFid(user.fid);
 		if (groups.length === 0) {
 			await job.updateProgress(100);
-			console.log(`[neynar-webhook-job] No groups found for user ${user.fid}`);
+			console.log(
+				`[neynar-webhook-job] job ${job.id} No groups found for user ${user.fid}`,
+			);
 			return {
 				status: "success",
 				message: "No groups are tracking the given user",
@@ -82,7 +86,9 @@ export const processNeynarWebhookJob = async (
 
 		const agentAddress = xmtpAgent.address;
 		if (!agentAddress) {
-			console.error("❌ Unable to get xmtp agent address");
+			console.error(
+				`[neynar-webhook-job] job ${job.id} ❌ Unable to get xmtp agent address`,
+			);
 			return {
 				status: "failed",
 				error: "Unable to get xmtp agent address",
@@ -134,7 +140,9 @@ export const processNeynarWebhookJob = async (
 
 		// if still no token info, return error
 		if (!sellToken || !buyToken) {
-			console.error("❌ Unable to get token info");
+			console.error(
+				`[neynar-webhook-job] job ${job.id} ❌ Unable to get token info`,
+			);
 			return {
 				status: "failed",
 				error: "Unable to get token info",
@@ -170,7 +178,9 @@ export const processNeynarWebhookJob = async (
 		});
 		progress = 15;
 		await job.updateProgress(progress);
-		console.log("[neynar-webhook-job] Building copy trade action");
+		console.log(
+			`[neynar-webhook-job] job ${job.id} Building copy trade action`,
+		);
 
 		const totalGroups = groups.length;
 		let completedGroups = 0;
@@ -183,7 +193,9 @@ export const processNeynarWebhookJob = async (
 					group.group.conversationId,
 				);
 			if (!conversation) {
-				console.error("❌ Unable to get conversation");
+				console.error(
+					`[neynar-webhook-job] job ${job.id} ❌ Unable to get conversation`,
+				);
 				return {
 					status: "failed",
 					error: "Unable to get conversation",
@@ -196,7 +208,7 @@ export const processNeynarWebhookJob = async (
 				`See more details here ${env.APP_URL}/g/${group.groupId}/tx/${transaction.transactionHash}`,
 			);
 			console.log(
-				`Copy trade action sent to the group chat ${conversation.id}`,
+				`[neynar-webhook-job] job ${job.id} Copy trade action sent to the group chat ${conversation.id}`,
 			);
 
 			completedGroups += 1;
@@ -213,7 +225,7 @@ export const processNeynarWebhookJob = async (
 			message: "Copy trade handled successfully",
 		};
 	} catch (error) {
-		console.error("[neynar-webhook-job] Job $job.idfailed:", error);
+		console.error(`[neynar-webhook-job] job ${job.id} failed:`, error);
 		throw error;
 	}
 };
