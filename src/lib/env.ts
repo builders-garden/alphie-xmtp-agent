@@ -66,6 +66,9 @@ const envSchema = z.object({
 		.refine((s) => s === "true" || s === "false")
 		.default("false")
 		.transform((s) => s === "true"),
+
+	// Coingecko.com api key, get yours at https://www.coingecko.com/en/developers/dashboard
+	COINGECKO_API_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

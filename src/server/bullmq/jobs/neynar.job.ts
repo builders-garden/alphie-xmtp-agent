@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import { ulid } from "ulid";
 import type { Address } from "viem";
+import { getCoingeckoTokenInfo } from "../../../lib/coingecko.js";
 import {
 	getActivityByTxHash,
 	saveActivityForMultipleGroups,
@@ -109,11 +110,16 @@ export const processNeynarWebhookJob = async (
 
 		// get token info from onchain and save in db
 		if (!sellToken || !buyToken) {
-			const onchainTokenInfo = await getTokenInfo({
-				sellTokenAddress: transaction.sellToken,
-				buyTokenAddress: transaction.buyToken,
-				chainId: transaction.chainId,
-			});
+			const [sellTokenCoingeckoInfo, buyTokenCoingeckoInfo, onchainTokenInfo] =
+				await Promise.all([
+					getCoingeckoTokenInfo("base", transaction.sellToken),
+					getCoingeckoTokenInfo("base", transaction.buyToken),
+					getTokenInfo({
+						sellTokenAddress: transaction.sellToken,
+						buyTokenAddress: transaction.buyToken,
+						chainId: transaction.chainId,
+					}),
+				]);
 
 			if (!sellToken) {
 				sellToken = await saveTokenInDb({
@@ -123,6 +129,9 @@ export const processNeynarWebhookJob = async (
 					symbol: onchainTokenInfo.sellSymbol,
 					name: onchainTokenInfo.sellSymbol ?? "Unknown",
 					decimals: onchainTokenInfo.tokenDecimals ?? 18,
+					imageUrl: sellTokenCoingeckoInfo
+						? sellTokenCoingeckoInfo.image.large
+						: undefined,
 				});
 			}
 
@@ -134,6 +143,9 @@ export const processNeynarWebhookJob = async (
 					symbol: onchainTokenInfo.buySymbol,
 					name: onchainTokenInfo.buySymbol ?? "Unknown",
 					decimals: onchainTokenInfo.tokenDecimals ?? 18,
+					imageUrl: buyTokenCoingeckoInfo
+						? buyTokenCoingeckoInfo.image.large
+						: undefined,
 				});
 			}
 		}

@@ -89,6 +89,7 @@ export const tokenBalanceSchema = z.object({
 		decimals: z.number(),
 		symbol: z.string(),
 		name: z.string(),
+		total_supply: z.string().nullable(),
 	}),
 	balance: z.object({
 		in_usdc: z.number().nullable(),
