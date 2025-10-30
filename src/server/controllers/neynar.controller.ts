@@ -66,6 +66,18 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 						.address as Address,
 					sellAmount:
 						transaction.net_transfer.sending_token.balance.in_token ?? "0",
+					sellAmountUsd:
+						transaction.net_transfer.sending_token.balance.in_usdc?.toString() ??
+						"0",
+					buyAmount:
+						transaction.net_transfer.receiving_token.balance.in_token ?? "0",
+					buyAmountUsd:
+						transaction.net_transfer.receiving_token.balance.in_usdc?.toString() ??
+						"0",
+					sellAmountTotSupply:
+						transaction.net_transfer.sending_token.token.total_supply ?? "0",
+					buyAmountTotSupply:
+						transaction.net_transfer.receiving_token.token.total_supply ?? "0",
 				},
 			},
 			{

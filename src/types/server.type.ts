@@ -11,6 +11,11 @@ export const handleCopyTradeSchema = z.object({
 		buyToken: z.custom<Address>(),
 		sellToken: z.custom<Address>(),
 		sellAmount: z.string(),
+		sellAmountUsd: z.string(),
+		buyAmount: z.string(),
+		buyAmountUsd: z.string(),
+		sellAmountTotSupply: z.string(),
+		buyAmountTotSupply: z.string(),
 	}),
 });
 

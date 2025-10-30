@@ -23,6 +23,7 @@ import {
 	type NeynarWebhookJobData,
 } from "../../../types/index.js";
 import { getTokenInfo, getXmtpCopyTradeAction } from "../../../utils/index.js";
+import { getTokenPriceAndFdv } from "../../../utils/token.util.js";
 
 /**
  * Process neynar webhook - handle copy trade for any farcaster user
@@ -166,6 +167,16 @@ export const processNeynarWebhookJob = async (
 		const actionMessage = `Copy trade @${userInDb.name}: Swap ${sellAmount} ${sellToken.symbol} for ${buyToken.symbol}`;
 
 		// save user activity in db
+		const { price: sellTokenPrice, fdv: sellFdv } = getTokenPriceAndFdv({
+			amount: transaction.sellAmount,
+			amountInUsd: transaction.sellAmountUsd,
+			totalSupply: transaction.sellAmountTotSupply,
+		});
+		const { price: buyTokenPrice, fdv: buyFdv } = getTokenPriceAndFdv({
+			amount: transaction.buyAmount,
+			amountInUsd: transaction.buyAmountUsd,
+			totalSupply: transaction.buyAmountTotSupply,
+		});
 		await saveUserActivityInDb({
 			userId: userInDb.id,
 			chainId: transaction.chainId,
@@ -173,11 +184,15 @@ export const processNeynarWebhookJob = async (
 			sellTokenId: sellToken.id,
 			buyTokenId: buyToken.id,
 			sellAmount: sellAmount,
-			buyAmount: "0",
-			sellMarketCap: "0", // TODO: get market cap from neynar
-			buyMarketCap: "0", // TODO: get market cap from neynar
-			sellTokenPrice: "0", // TODO: get price from neynar
-			buyTokenPrice: "0", // TODO: get price from neynar
+			sellAmountUsd: transaction.sellAmountUsd,
+			buyAmount: transaction.buyAmount,
+			buyAmountUsd: transaction.buyAmountUsd,
+			sellAmountTotSupply: transaction.sellAmountTotSupply,
+			buyAmountTotSupply: transaction.buyAmountTotSupply,
+			sellFdv: sellFdv.toString(),
+			buyFdv: buyFdv.toString(),
+			sellTokenPrice: sellTokenPrice.toString(),
+			buyTokenPrice: buyTokenPrice.toString(),
 		});
 
 		// save group activity in db
