@@ -70,6 +70,7 @@ export const aiGenerateAnswer = async ({
 			if (trackOutput.farcasterUser) {
 				await sendConfirmation({
 					ctx: xmtpContext,
+					prevMessage: trackOutput.text,
 					message: `Confirm to start tracking @${trackOutput.farcasterUser.username} (fid ${trackOutput.farcasterUser.fid})?`,
 					onYes: async (ctx) => {
 						// add job to update neynar webhook with new user fid
@@ -87,7 +88,7 @@ export const aiGenerateAnswer = async ({
 					},
 					onNo: async (ctx) => await ctx.sendText("Ok, operation cancelled"),
 				});
-				return { answer: trackOutput.text, isReply: true };
+				return { answer: undefined, isReply: false };
 			}
 			return { answer: trackOutput.text, isReply: true };
 		}

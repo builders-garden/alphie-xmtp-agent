@@ -7,8 +7,8 @@ import {
 	toHex,
 } from "viem";
 import { base } from "viem/chains";
-import { XMTP_NETWORKS } from "../lib/constants.js";
-import { env } from "../lib/env.js";
+import { XMTP_NETWORKS } from "../../lib/constants.js";
+import { env } from "../../lib/env.js";
 
 /**
  * Swap ERC20 tokens

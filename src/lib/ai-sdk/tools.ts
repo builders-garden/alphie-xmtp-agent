@@ -67,23 +67,4 @@ export const tools = {
 			return HELP_HINT_MESSAGE;
 		},
 	}),
-	/*
-	leaderboard: tool({
-		description: "Get the leaderboard of the group",
-		inputSchema: z.object({}),
-		execute: async () => {
-			// TODO call endpoint to get latest leaderboard data
-			const leaderboard = "1. @alice: 100\n2. @bob: 90\n3. @charlie: 80";
-			return `🏆 Leaderboard of the group\n\n${leaderboard}`;
-		},
-	}),
-	help: tool({
-		description:
-			"Help the user gather more information about Alphie and its features",
-		inputSchema: z.object({}),
-		execute: async () => {
-			return HELP_HINT_MESSAGE;
-		},
-	}),
-	*/
 };

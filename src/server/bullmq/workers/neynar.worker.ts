@@ -29,7 +29,7 @@ export const neynarWebhookWorker = new Worker<NeynarWebhookJobData, JobResult>(
 	},
 	{
 		connection: redisConnection,
-		concurrency: 2, // Process up to 2 videos simultaneously
+		concurrency: 2, // Process up to 2 jobs simultaneously
 		limiter: {
 			max: 10,
 			duration: 60000, // Max 10 jobs per minute

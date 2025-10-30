@@ -46,7 +46,7 @@ export const processNeynarWebhookJob = async (
 			txHash: transaction.transactionHash,
 			chainId: transaction.chainId,
 		});
-		if (activity) {
+		if (activity && env.NODE_ENV === "production") {
 			await job.updateProgress(100);
 			console.log(
 				`[neynar-webhook-job] job ${job.id} Activity already exists in db for tx hash ${transaction.transactionHash} on chain ${transaction.chainId}`,
@@ -210,7 +210,7 @@ export const processNeynarWebhookJob = async (
 		);
 
 		// build copy trade action
-		const action = getXmtpCopyTradeAction({
+		const action = await getXmtpCopyTradeAction({
 			actionMessage,
 			transaction,
 			userUsername: userInDb.name,

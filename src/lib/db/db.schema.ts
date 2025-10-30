@@ -8,6 +8,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import type { FarcasterNotificationDetails } from "../../types/farcaster.type.js";
+import type { DurableActionType } from "../../types/xmtp.types.js";
 
 /**
  * Better Auth Tables
@@ -265,6 +266,60 @@ export const groupActivity = sqliteTable("group_activity", {
 });
 
 /**
+ * Durable Inline Actions Table
+ */
+export const inlineAction = sqliteTable("inline_action", {
+	id: text("id").primaryKey().notNull(),
+	type: text("type").notNull().$type<DurableActionType>(),
+	payload: text("payload", { mode: "json" }).notNull(),
+	expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+	createdAt: integer("created_at", { mode: "timestamp_ms" })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+
+/**
+ * Alphie Inline Action Interactions Table (user <-> many inline action interaction)
+ */
+export const inlineActionInteraction = sqliteTable(
+	"inline_action_interaction",
+	{
+		id: text("id").primaryKey().notNull(),
+		inlineActionId: text("inline_action_id")
+			.notNull()
+			.references(() => inlineAction.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		txHash: text("tx_hash").notNull(),
+		chainId: integer("chain_id", { mode: "number" }).notNull(),
+		userEthBalance: text("user_eth_balance"),
+		userSellTokenBalance: text("user_sell_token_balance"),
+		gasEstimate: text("gas_estimate"),
+		hasEnoughEth: integer("has_enough_eth", { mode: "boolean" }),
+		hasEnoughToken: integer("has_enough_token", { mode: "boolean" }),
+		hasSomeToken: integer("has_some_token", { mode: "boolean" }),
+		sellAmount: text("sell_amount"),
+		quote: text("quote", { mode: "json" }),
+		walletSendCalls: text("wallet_send_calls", { mode: "json" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(t) => [
+		foreignKey({
+			columns: [t.txHash, t.chainId],
+			foreignColumns: [userActivity.txHash, userActivity.chainId],
+			name: "inline_action_interaction_user_activity_id_fk",
+		}),
+	],
+);
+
+/**
  * Neynar Webhook Table
  */
 export const neynarWebhook = sqliteTable("neynar_webhook", {
@@ -319,6 +374,17 @@ export type CreateGroupActivity = typeof groupActivity.$inferInsert;
 export type UpdateGroupActivity = Partial<CreateGroupActivity>;
 
 export type NeynarWebhook = typeof neynarWebhook.$inferSelect;
+
+export type InlineAction = typeof inlineAction.$inferSelect;
+export type CreateInlineAction = typeof inlineAction.$inferInsert;
+export type UpdateInlineAction = Partial<CreateInlineAction>;
+
+export type InlineActionInteraction =
+	typeof inlineActionInteraction.$inferSelect;
+export type CreateInlineActionInteraction =
+	typeof inlineActionInteraction.$inferInsert;
+export type UpdateInlineActionInteraction =
+	Partial<CreateInlineActionInteraction>;
 
 /**
  * Drizzle Relations
@@ -420,3 +486,17 @@ export const groupActivityRelations = relations(groupActivity, ({ one }) => ({
 		references: [userActivity.chainId, userActivity.txHash],
 	}),
 }));
+
+export const inlineActionRelations = relations(inlineAction, ({ many }) => ({
+	interactions: many(inlineActionInteraction),
+}));
+
+export const inlineActionInteractionRelations = relations(
+	inlineActionInteraction,
+	({ one }) => ({
+		inlineAction: one(inlineAction, {
+			fields: [inlineActionInteraction.inlineActionId],
+			references: [inlineAction.id],
+		}),
+	}),
+);

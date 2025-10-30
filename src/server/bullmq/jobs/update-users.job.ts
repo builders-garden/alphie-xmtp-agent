@@ -58,7 +58,10 @@ export const processUpdateUsersJob = async (
 		if (!neynarWebhook) {
 			throw new Error("Neynar webhook not found in neynar");
 		}
-		console.log("neynarWebhook", neynarWebhook);
+		console.log(
+			"neynarWebhook",
+			neynarWebhook.subscription.filters["trade.created"],
+		);
 
 		// Normalize inputs
 		const addUsersInput = jobAddUsers ?? [];

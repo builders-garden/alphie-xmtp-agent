@@ -1,52 +1,9 @@
-import {
-	type ContentCodec,
+import type {
+	ContentCodec,
 	ContentTypeId,
-	type EncodedContent,
+	EncodedContent,
 } from "@xmtp/content-type-primitives";
-
-/**
- * Content Type ID for Actions messages
- * Following XIP-67 specification for inline actions
- */
-export const ContentTypeActions = new ContentTypeId({
-	authorityId: "coinbase.com",
-	typeId: "actions",
-	versionMajor: 1,
-	versionMinor: 0,
-});
-
-/**
- * Individual action definition
- */
-export type Action = {
-	/** Unique identifier for this action */
-	id: string;
-	/** Display text for the button */
-	label: string;
-	/** Optional image URL */
-	imageUrl?: string;
-	/** Optional visual style (primary|secondary|danger) */
-	style?: "primary" | "secondary" | "danger";
-	/** Optional metadata */
-	metadata?: Record<string, unknown>;
-	/** Optional ISO-8601 expiration timestamp */
-	expiresAt?: string;
-};
-
-/**
- * Actions content structure
- * Agents use this to present interactive button options to users
- */
-export type ActionsContent = {
-	/** Unique identifier for these actions */
-	id: string;
-	/** Descriptive text explaining the actions */
-	description: string;
-	/** Array of action definitions */
-	actions: Action[];
-	/** Optional ISO-8601 expiration timestamp */
-	expiresAt?: string;
-};
+import { type ActionsContent, ContentTypeActions } from "../../types/index.js";
 
 /**
  * Actions codec for encoding/decoding Actions messages

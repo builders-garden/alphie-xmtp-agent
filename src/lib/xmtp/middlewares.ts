@@ -9,6 +9,7 @@ import type {
 	ThinkingReactionContext,
 } from "../../types/index.js";
 import { actionHandlers } from "../../utils/index.js";
+import { handleDurableActionById } from "../../utils/xmtp/inline-actions-registry.js";
 
 /**
  * Middleware to handle intent messages and execute registered action handlers
@@ -28,7 +29,13 @@ export const inlineActionsMiddleware: AgentMiddleware = async (ctx, next) => {
 				console.error("❌ Error in action handler:", error);
 			}
 		} else {
-			console.error("❌ Unknown action:", intentContent.actionId);
+			const handled = await handleDurableActionById(
+				ctx,
+				intentContent.actionId,
+			);
+			if (!handled) {
+				console.error("❌ Unknown action:", intentContent.actionId);
+			}
 		}
 		return;
 	}

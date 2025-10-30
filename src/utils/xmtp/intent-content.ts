@@ -3,7 +3,10 @@ import {
 	ContentTypeId,
 	type EncodedContent,
 } from "@xmtp/content-type-primitives";
-import z from "zod";
+import {
+	type IntentContent,
+	intentContentSchema,
+} from "../../types/xmtp.types.js";
 
 /**
  * Content Type ID for Intent messages
@@ -15,17 +18,6 @@ export const ContentTypeIntent = new ContentTypeId({
 	versionMajor: 1,
 	versionMinor: 0,
 });
-
-/**
- * Intent content structure
- * Users send this when they interact with actions
- */
-export const intentContentSchema = z.object({
-	id: z.string(),
-	actionId: z.string(),
-	metadata: z.record(z.string(), z.unknown()).optional(),
-});
-export type IntentContent = z.infer<typeof intentContentSchema>;
 
 /**
  * Intent codec for encoding/decoding Intent messages

@@ -1,9 +1,4 @@
-import {
-	Agent,
-	type DecodedMessage,
-	filter,
-	type MessageContext,
-} from "@xmtp/agent-sdk";
+import { Agent, filter, type MessageContext } from "@xmtp/agent-sdk";
 import type { GroupUpdated } from "@xmtp/content-type-group-updated";
 import { GroupUpdatedCodec } from "@xmtp/content-type-group-updated";
 import { MarkdownCodec } from "@xmtp/content-type-markdown";
@@ -15,25 +10,25 @@ import type { Reply } from "@xmtp/content-type-reply";
 import { ReplyCodec } from "@xmtp/content-type-reply";
 import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
 import { WalletSendCallsCodec } from "@xmtp/content-type-wallet-send-calls";
-import { ContentType, SortDirection } from "@xmtp/node-bindings";
 import type {
 	ActionsContent,
 	GroupUpdatedMessage,
 	IntentContent,
 	ThinkingReactionContext,
 } from "../../types/index.js";
-import { ActionsCodec, IntentCodec } from "../../types/index.js";
 import {
 	getEncryptionKeyFromString,
 	getXmtpActions,
 	sendActions,
 } from "../../utils/index.js";
+import { ActionsCodec } from "../../utils/xmtp/actions-codec.js";
+import { IntentCodec } from "../../utils/xmtp/intent-content.js";
 import {
 	extractMessageContent,
 	handleGroupUpdated,
 	shouldRespondToMessage,
 	shouldSendHelpHint,
-} from "../../utils/message.util.js";
+} from "../../utils/xmtp/message.util.js";
 import { aiGenerateAnswer } from "../ai-sdk/index.js";
 import { DM_RESPONSE_MESSAGE, HELP_HINT_MESSAGE } from "../constants.js";
 import { getOrCreateGroupByConversationId } from "../db/queries/index.js";
@@ -107,21 +102,20 @@ export const handleXmtpMessage = async (
 
 		// Handle group messages
 		if (ctx.isGroup()) {
-			console.log("Handling group message");
 			const conversationId = ctx.conversation.id;
+			console.log(`[xmtp] Handling group message ${conversationId}`);
 			const { group, isNew } = await getOrCreateGroupByConversationId(
 				conversationId,
 				ctx.conversation,
 				agentAddress,
 				ctx.client.inboxId,
 			);
-			console.log("group", group.id, "isNew:", isNew);
+			console.log(`[xmtp] Group ${group.id} isNew: ${isNew}`);
 
 			// Handle group updates
 			if (ctx.message.contentType?.typeId === "group_updated") {
 				console.log(
-					"Group updated message received",
-					JSON.stringify(ctx.message),
+					`[xmtp] Group updated message received: ${JSON.stringify(ctx.message)}`,
 				);
 				const xmtpMessage = ctx.message as GroupUpdatedMessage;
 				const xmtpMembers = await ctx.conversation.members();
@@ -154,20 +148,6 @@ export const handleXmtpMessage = async (
 					const actions = getXmtpActions();
 					await sendActions(ctx, actions);
 					return;
-				}
-
-				let xmtpMessages: DecodedMessage[] = await ctx.conversation.messages({
-					limit: 20,
-					direction: SortDirection.Descending,
-					contentTypes: [ContentType.Text],
-				});
-				// get only the reply message in context for the ai
-				if (ctx.isReply()) {
-					const replyMessage = ctx.message.content;
-					console.log("reply message", replyMessage);
-					xmtpMessages = xmtpMessages.filter(
-						(m) => m.id === replyMessage.reference,
-					);
 				}
 
 				// generate answer with tools

@@ -8,7 +8,11 @@ import { db } from "../index.js";
  * @returns The saved group activity
  */
 export const saveUserActivityInDb = async (data: CreateUserActivity) => {
-	const [activity] = await db.insert(userActivity).values(data).returning();
+	const [activity] = await db
+		.insert(userActivity)
+		.values(data)
+		.onConflictDoNothing()
+		.returning();
 	return activity;
 };
 

@@ -9,6 +9,10 @@ import { db } from "../index.js";
 export const saveActivityForMultipleGroups = async (
 	data: CreateGroupActivity[],
 ) => {
-	const activities = await db.insert(groupActivity).values(data).returning();
+	const activities = await db
+		.insert(groupActivity)
+		.values(data)
+		.onConflictDoNothing()
+		.returning();
 	return activities;
 };

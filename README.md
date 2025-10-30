@@ -75,7 +75,7 @@ bash tests/test-webhook.sh
 
 ### BullMQ Queue Configuration
 
-The video processing system uses BullMQ for reliable background job processing with the following features:
+The processing system uses BullMQ for reliable background job processing with the following features:
 
 ### Queue Settings
 

@@ -9,20 +9,20 @@ import type { Reaction } from "@xmtp/content-type-reaction";
 import type { RemoteAttachment } from "@xmtp/content-type-remote-attachment";
 import type { Reply } from "@xmtp/content-type-reply";
 import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
-import { AGENT_TRIGGERS } from "../lib/constants.js";
-import type { Group } from "../lib/db/db.schema.js";
+import { AGENT_TRIGGERS } from "../../lib/constants.js";
+import type { Group } from "../../lib/db/db.schema.js";
 import {
 	addGroupMembersByInboxIds,
 	deleteGroupById,
 	removeGroupMembersByInboxIds,
 	updateGroup,
-} from "../lib/db/queries/index.js";
-import { XMTP_AGENTS } from "../lib/xmtp-agents.js";
+} from "../../lib/db/queries/index.js";
+import { XMTP_AGENTS } from "../../lib/xmtp-agents.js";
 import type {
 	ActionsContent,
 	GroupUpdatedMessage,
 	IntentContent,
-} from "../types/index.js";
+} from "../../types/index.js";
 
 /**
  * Check if a message is a reply to the agent

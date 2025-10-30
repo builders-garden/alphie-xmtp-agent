@@ -177,7 +177,7 @@ export const checkJobStatus = async (req: Request, res: Response) => {
 
 		res.json(response);
 	} catch (error) {
-		console.error("Error checking video status:", error);
+		console.error("Error checking job status:", error);
 		res.status(500).json({
 			status: "error",
 			error: error instanceof Error ? error.message : "Unknown error",
@@ -202,7 +202,7 @@ async function getJobPosition(
 }
 
 /**
- * Cancel a video generation job
+ * Cancel a neynar job
  */
 export const cancelJob = async (req: Request, res: Response) => {
 	try {
