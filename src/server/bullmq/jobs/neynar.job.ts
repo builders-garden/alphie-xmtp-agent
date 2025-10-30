@@ -2,10 +2,7 @@ import type { Job } from "bullmq";
 import { ulid } from "ulid";
 import type { Address } from "viem";
 import { getCoingeckoTokenInfo } from "../../../lib/coingecko.js";
-import {
-	getActivityByTxHash,
-	saveActivityForMultipleGroups,
-} from "../../../lib/db/queries/group-activity.query.js";
+import { saveActivityForMultipleGroups } from "../../../lib/db/queries/group-activity.query.js";
 import {
 	getGroupsTrackingUserByFarcasterFid,
 	getUserByFarcasterFid,
@@ -14,6 +11,10 @@ import {
 	getTokenInfoFromDb,
 	saveTokenInDb,
 } from "../../../lib/db/queries/tokens.query.js";
+import {
+	getUserActivityByTxHashAndChainId,
+	saveUserActivityInDb,
+} from "../../../lib/db/queries/user-activity.query.js";
 import { env } from "../../../lib/env.js";
 import { createXmtpAgent } from "../../../lib/xmtp/agent.js";
 import {
@@ -41,10 +42,10 @@ export const processNeynarWebhookJob = async (
 
 	try {
 		// check if activity already exists in db
-		const activity = await getActivityByTxHash(
-			transaction.transactionHash,
-			transaction.chainId,
-		);
+		const activity = await getUserActivityByTxHashAndChainId({
+			txHash: transaction.transactionHash,
+			chainId: transaction.chainId,
+		});
 		if (activity) {
 			await job.updateProgress(100);
 			console.log(
@@ -164,10 +165,8 @@ export const processNeynarWebhookJob = async (
 
 		const actionMessage = `Copy trade @${userInDb.name}: Swap ${sellAmount} ${sellToken.symbol} for ${buyToken.symbol}`;
 
-		// save group activity in db
-		const activities = groups.map((group) => ({
-			id: ulid(),
-			groupId: group.groupId,
+		// save user activity in db
+		await saveUserActivityInDb({
 			userId: userInDb.id,
 			chainId: transaction.chainId,
 			txHash: transaction.transactionHash,
@@ -179,8 +178,36 @@ export const processNeynarWebhookJob = async (
 			buyMarketCap: "0", // TODO: get market cap from neynar
 			sellTokenPrice: "0", // TODO: get price from neynar
 			buyTokenPrice: "0", // TODO: get price from neynar
+		});
+
+		// save group activity in db
+		const groupActivities = groups.map((group) => ({
+			id: ulid(),
+			groupId: group.groupId,
+			activityChainId: transaction.chainId,
+			activityTxHash: transaction.transactionHash,
 		}));
-		await saveActivityForMultipleGroups(activities);
+		await saveActivityForMultipleGroups(groupActivities);
+
+		// generate og image for the transaction
+		const ogImageRes = await fetch(
+			`${env.APP_URL}/api/og/c/${transaction.chainId}/tx/${transaction.transactionHash}`,
+			{
+				headers: {
+					"x-api-secret": env.API_KEY_SECRET,
+				},
+			},
+		);
+		if (!ogImageRes.ok) {
+			console.error(
+				`[neynar-webhook-job] job ${job.id} ❌ Unable to generate og image for tx ${transaction.transactionHash} on chain ${transaction.chainId}`,
+			);
+		}
+		const ogImage = await ogImageRes.json();
+		console.log(
+			`[neynar-webhook-job] job ${job.id} Og image generated for tx ${transaction.transactionHash} on chain ${transaction.chainId}`,
+			ogImage,
+		);
 
 		// build copy trade action
 		const action = getXmtpCopyTradeAction({

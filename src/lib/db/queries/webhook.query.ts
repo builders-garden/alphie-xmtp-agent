@@ -19,27 +19,6 @@ export const getLatestNeynarWebhookFromDb =
 	};
 
 /**
- * Save a neynar webhook to the database
- * @param webhook - The neynar webhook to save
- * @returns The saved neynar webhook
- */
-export const saveNeynarWebhookInDb = async (
-	webhook: NeynarWebhookSuccessResponse,
-) => {
-	const data = await db
-		.insert(neynarWebhook)
-		.values({
-			neynarWebhookId: webhook.webhook.webhook_id,
-			webhookUrl: webhook.webhook.target_url,
-		})
-		.returning();
-	if (data.length > 0) {
-		return data[0];
-	}
-	return null;
-};
-
-/**
  * Update a neynar webhook in the database
  * @param webhook - The neynar webhook to update
  * @returns The updated neynar webhook
@@ -47,11 +26,28 @@ export const saveNeynarWebhookInDb = async (
 export const updateNeynarWebhookInDb = async (
 	webhook: NeynarWebhookSuccessResponse,
 ) => {
+	let trackedFids: number[] | undefined;
+	let minimumTokenAmountUsdc: number | undefined;
+	let minimumNeynarScore: number | undefined;
+
+	// if the webhook is of type trade.created
+	if ("trade.created" in webhook.webhook.subscription.filters) {
+		trackedFids = webhook.webhook.subscription.filters["trade.created"].fids;
+		minimumTokenAmountUsdc =
+			webhook.webhook.subscription.filters["trade.created"]
+				.minimum_token_amount_usdc;
+		minimumNeynarScore =
+			webhook.webhook.subscription.filters["trade.created"]
+				.minimum_trader_neynar_score;
+	}
 	const data = await db
 		.update(neynarWebhook)
 		.set({
 			neynarWebhookId: webhook.webhook.webhook_id,
 			webhookUrl: webhook.webhook.target_url,
+			trackedFids,
+			minimumTokenAmountUsdc,
+			minimumNeynarScore,
 		})
 		.where(eq(neynarWebhook.neynarWebhookId, webhook.webhook.webhook_id));
 	return data;

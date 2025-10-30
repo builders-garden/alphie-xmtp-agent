@@ -211,20 +211,16 @@ export const tokens = sqliteTable("tokens", {
 });
 
 /**
- * Alphie Group Activity (many-to-many: groups <-> users being tracked)
+ * Alphie User Activity (user <-> tx activity)
  */
-export const groupActivity = sqliteTable(
-	"group_activity",
+export const userActivity = sqliteTable(
+	"user_activity",
 	{
-		id: text("id").primaryKey().notNull(),
-		groupId: text("group_id")
-			.notNull()
-			.references(() => group.id, { onDelete: "cascade" }),
+		chainId: integer("chain_id", { mode: "number" }).notNull(),
+		txHash: text("tx_hash").notNull(),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		chainId: integer("chain_id", { mode: "number" }).notNull(),
-		txHash: text("tx_hash").notNull(),
 		sellTokenId: text("sell_token_id")
 			.notNull()
 			.references(() => tokens.id, { onDelete: "cascade" }),
@@ -239,17 +235,34 @@ export const groupActivity = sqliteTable(
 		buyMarketCap: text("buy_market_cap").notNull(),
 		sellTokenPrice: text("sell_token_price").notNull(),
 		buyTokenPrice: text("buy_token_price").notNull(),
-		parentActivityId: text("parent_activity_id"), // auto reference for copy trading from the miniapp/xmtp chat
+		parentActivityChainId: integer("parent_activity_chain_id", {
+			mode: "number",
+		}),
+		parentActivityTxHash: text("parent_activity_tx_hash"),
 		createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	},
 	(t) => [
+		primaryKey({ columns: [t.chainId, t.txHash] }),
 		foreignKey({
-			columns: [t.parentActivityId],
-			foreignColumns: [t.id],
+			columns: [t.parentActivityChainId, t.parentActivityTxHash],
+			foreignColumns: [t.chainId, t.txHash],
 			name: "group_activity_parent_activity_id_fk",
 		}),
 	],
 );
+
+/**
+ * Alphie Group Activity (group <-> activity)
+ */
+export const groupActivity = sqliteTable("group_activity", {
+	id: text("id").primaryKey().notNull(),
+	groupId: text("group_id")
+		.notNull()
+		.references(() => group.id, { onDelete: "cascade" }),
+	activityChainId: integer("activity_chain_id", { mode: "number" }),
+	activityTxHash: text("activity_tx_hash"),
+	createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
 
 /**
  * Neynar Webhook Table
@@ -259,6 +272,11 @@ export const neynarWebhook = sqliteTable("neynar_webhook", {
 	neynarWebhookId: text("neynar_webhook_id").notNull().unique(),
 	webhookUrl: text("webhook_url").notNull(),
 	webhookName: text("webhook_name").default("Alphie webhook").notNull(),
+	trackedFids: text("tracked_fids", { mode: "json" }).default([]),
+	minimumTokenAmountUsdc: integer("minimum_token_amount_usdc", {
+		mode: "number",
+	}),
+	minimumNeynarScore: integer("minimum_neynar_score", { mode: "number" }),
 	createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -292,6 +310,10 @@ export type Tokens = typeof tokens.$inferSelect;
 export type CreateTokens = typeof tokens.$inferInsert;
 export type UpdateTokens = Partial<CreateTokens>;
 
+export type UserActivity = typeof userActivity.$inferSelect;
+export type CreateUserActivity = typeof userActivity.$inferInsert;
+export type UpdateUserActivity = Partial<CreateUserActivity>;
+
 export type GroupActivity = typeof groupActivity.$inferSelect;
 export type CreateGroupActivity = typeof groupActivity.$inferInsert;
 export type UpdateGroupActivity = Partial<CreateGroupActivity>;
@@ -307,7 +329,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	walletAddresses: many(walletAddress),
 	farcasters: many(farcaster),
 	groupMembers: many(groupMember),
-	activities: many(groupActivity),
+	activities: many(userActivity),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -341,6 +363,7 @@ export const farcasterRelations = relations(farcaster, ({ one }) => ({
 export const groupRelations = relations(group, ({ many }) => ({
 	members: many(groupMember),
 	trackedUsers: many(groupTrackedUser),
+	activities: many(groupActivity),
 }));
 
 export const groupMemberRelations = relations(groupMember, ({ one }) => ({
@@ -372,21 +395,28 @@ export const groupTrackedUserRelations = relations(
 	}),
 );
 
+export const userActivityRelations = relations(userActivity, ({ one }) => ({
+	user: one(user, {
+		fields: [userActivity.userId],
+		references: [user.id],
+	}),
+	sellToken: one(tokens, {
+		fields: [userActivity.sellTokenId],
+		references: [tokens.id],
+	}),
+	buyToken: one(tokens, {
+		fields: [userActivity.buyTokenId],
+		references: [tokens.id],
+	}),
+}));
+
 export const groupActivityRelations = relations(groupActivity, ({ one }) => ({
 	group: one(group, {
 		fields: [groupActivity.groupId],
 		references: [group.id],
 	}),
-	user: one(user, {
-		fields: [groupActivity.userId],
-		references: [user.id],
-	}),
-	sellToken: one(tokens, {
-		fields: [groupActivity.sellTokenId],
-		references: [tokens.id],
-	}),
-	buyToken: one(tokens, {
-		fields: [groupActivity.buyTokenId],
-		references: [tokens.id],
+	activity: one(userActivity, {
+		fields: [groupActivity.activityChainId, groupActivity.activityTxHash],
+		references: [userActivity.chainId, userActivity.txHash],
 	}),
 }));
