@@ -257,15 +257,25 @@ export const userActivity = sqliteTable(
 /**
  * Alphie Group Activity (group <-> activity)
  */
-export const groupActivity = sqliteTable("group_activity", {
-	id: text("id").primaryKey().notNull(),
-	groupId: text("group_id")
-		.notNull()
-		.references(() => group.id, { onDelete: "cascade" }),
-	activityChainId: integer("activity_chain_id", { mode: "number" }),
-	activityTxHash: text("activity_tx_hash"),
-	createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const groupActivity = sqliteTable(
+	"group_activity",
+	{
+		id: text("id").primaryKey().notNull(),
+		groupId: text("group_id")
+			.notNull()
+			.references(() => group.id, { onDelete: "cascade" }),
+		activityChainId: integer("activity_chain_id", { mode: "number" }).notNull(),
+		activityTxHash: text("activity_tx_hash").notNull(),
+		createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	},
+	(t) => [
+		foreignKey({
+			columns: [t.activityChainId, t.activityTxHash],
+			foreignColumns: [userActivity.chainId, userActivity.txHash],
+			name: "group_activity_activity_id_fk",
+		}),
+	],
+);
 
 /**
  * Durable Inline Actions Table
