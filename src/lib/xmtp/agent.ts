@@ -170,8 +170,6 @@ export const handleXmtpMessage = async (
 					);
 				}
 
-				//const xmtpMembers = await ctx.conversation.members();
-
 				// generate answer with tools
 				const { answer, isReply } = await aiGenerateAnswer({
 					message: messageContent,

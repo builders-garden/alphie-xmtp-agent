@@ -11,6 +11,7 @@ import {
 	HELP_HINT_MESSAGE,
 	MIN_0X_SWAP_AMOUNT,
 } from "../lib/constants.js";
+import { getGroupByConversationId } from "../lib/db/queries/group.query.js";
 import { env } from "../lib/env.js";
 import type { HandleCopyTradeSchema } from "../types/index.js";
 import { getTransactionData, swapERC20 } from "../utils/index.js";
@@ -90,9 +91,11 @@ export const getXmtpActions = (options?: {
 export const getXmtpCopyTradeAction = ({
 	actionMessage,
 	transaction,
+	userUsername,
 	agentAddress,
 }: {
 	actionMessage: string;
+	userUsername: string;
 	transaction: HandleCopyTradeSchema["transaction"];
 	agentAddress: Address;
 }) => {
@@ -224,6 +227,18 @@ export const getXmtpCopyTradeAction = ({
 				walletSendCalls as unknown as WalletSendCallsParams,
 				ContentTypeWalletSendCalls,
 			);
+
+			// dynamically get group info from db
+			const groupInDb = await getGroupByConversationId(ctx.conversation.id);
+			const groupStr = groupInDb?.name
+				? ` in the group [${groupInDb.name}](cbwallet://messaging/${ctx.conversation.id})`
+				: "";
+			await dm.send(
+				`This transaction has been copied from the user @${userUsername}${groupStr}`,
+				ContentTypeMarkdown,
+			);
+
+			// send message in the group chat to open @alphie.base.eth conversation
 			await ctx.conversation.send(
 				`💸 Copy trade sent to you via DM, open [chat here](cbwallet://messaging/${agentAddress})`,
 				ContentTypeMarkdown,

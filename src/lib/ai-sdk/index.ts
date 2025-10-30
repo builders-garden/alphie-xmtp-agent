@@ -38,7 +38,7 @@ export const aiGenerateAnswer = async ({
 	const response = await generateText({
 		model: openai("gpt-4.1-mini"),
 		system: SYSTEM_PROMPT,
-		messages: [/*...modelMessages,*/ { role: "user", content: message }],
+		messages: [{ role: "user", content: message }],
 		tools,
 	});
 

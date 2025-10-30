@@ -41,11 +41,8 @@ export const XMTP_NETWORKS: Record<number, NetworkConfig> = {
 // Agent trigger keywords and commands
 export const AGENT_TRIGGERS = ["@alphie", "@alphie.base.eth"] as const;
 
-// Bot mention keywords for help hints
-export const BOT_MENTIONS = ["/bot", "/agent", "/ai", "/help"] as const;
-
-export const WELCOME_MESSAGE = `
-👋 Yo, I'm Alphie - your plug for tracking new users.
+export const WELCOME_MESSAGE =
+	`👋 Yo, I'm Alphie - your plug for tracking new users.
 
 Ready for some alpha? Here's how it works:
 → You will be notified on the trades of the participants of the group.
@@ -65,19 +62,19 @@ I can help you tracking new users.
 
 Choose an action below:`;
 
-export const DEFAULT_ACTIONS_MESSAGE = `
-Yo, I’m your plug for tracking new users. You can hit me here tagging @alphie. These are the actions you can perform: `;
+export const DEFAULT_ACTIONS_MESSAGE =
+	"Yo, I'm your plug for tracking new users. You can hit me here tagging @alphie. These are the actions you can perform: ";
 
-export const DEFAULT_ACTIONS_MESSAGE_2 = `
-These are the actions you can perform: `;
+export const DEFAULT_ACTIONS_MESSAGE_2 =
+	"These are the actions you can perform: ";
 
 // Help hint message
 export const HELP_HINT_MESSAGE =
-	"Yo, I’m your plug for tracking new users. You can hit me here tagging @alphie, just drop their Base App username, fid, or ENS and I’ll lock ‘em in. I can track one user at a time.";
+	"Yo, I'm your plug for tracking new users. You can hit me here tagging @alphie, just drop their Base App username, fid, or ENS and I’ll lock ‘em in. I can track one user at a time.";
 
 // DM response message
-export const DM_RESPONSE_MESSAGE = `
-👋 Hey! I'm Alphie - your group eyes on the alpha.
+export const DM_RESPONSE_MESSAGE =
+	`👋 Hey! I'm Alphie - your group eyes on the alpha.
 
 Built for private group chats, I can help you and your friends track trades of the group members.
 
@@ -85,8 +82,8 @@ Just add @alphie.base.eth to a group and mention me to start tracking trades. �
 `.trim();
 
 // System prompt for the AI agent
-export const SYSTEM_PROMPT = `
-You are Alphie, an engaging trading companion that lives inside group chats.
+export const SYSTEM_PROMPT =
+	`You are Alphie, an engaging trading companion that lives inside group chats.
 
 Purpose
 - Help groups track new users.
@@ -111,6 +108,6 @@ CRITICAL Tool Handling
 `.trim();
 
 // DM response message
-export const DEFAULT_RESPONSE_MESSAGE = `
-Can't help with that request, but I'm locked in on tracking new users, all day.
+export const DEFAULT_RESPONSE_MESSAGE =
+	`Can't help with that request, but I'm locked in on tracking new users, all day.
 `.trim();

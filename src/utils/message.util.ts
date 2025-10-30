@@ -9,7 +9,7 @@ import type { Reaction } from "@xmtp/content-type-reaction";
 import type { RemoteAttachment } from "@xmtp/content-type-remote-attachment";
 import type { Reply } from "@xmtp/content-type-reply";
 import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
-import { AGENT_TRIGGERS, BOT_MENTIONS } from "../lib/constants.js";
+import { AGENT_TRIGGERS } from "../lib/constants.js";
 import type { Group } from "../lib/db/db.schema.js";
 import {
 	addGroupMembersByInboxIds,
@@ -273,13 +273,14 @@ export async function shouldRespondToMessage({
 export function shouldSendHelpHint(message: string): boolean {
 	const lowerMessage = message.toLowerCase().trim();
 
-	return (
-		BOT_MENTIONS.some((mention) => lowerMessage.includes(mention)) &&
-		!AGENT_TRIGGERS.some((trigger) =>
-			lowerMessage.includes(trigger.toLowerCase()),
-		) &&
-		!containsAgentMention(message)
+	const isOnlyAgentTrigger = AGENT_TRIGGERS.some(
+		(trigger) => lowerMessage === trigger.toLowerCase(),
 	);
+	if (isOnlyAgentTrigger) {
+		return true;
+	}
+
+	return false;
 }
 
 /**

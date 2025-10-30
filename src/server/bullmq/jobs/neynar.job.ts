@@ -213,6 +213,7 @@ export const processNeynarWebhookJob = async (
 		const action = getXmtpCopyTradeAction({
 			actionMessage,
 			transaction,
+			userUsername: userInDb.name,
 			agentAddress: agentAddress as Address,
 		});
 		progress = 15;
