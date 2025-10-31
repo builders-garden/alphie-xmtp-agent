@@ -2,25 +2,19 @@ import type { Job } from "bullmq";
 import { resolveGroupId } from "../../../lib/db/queries/group.query.js";
 import {
 	addUsersToGroupTrackings,
+	countGroupsTrackingUserByFarcasterFid,
 	removeUsersFromGroupTrackings,
 } from "../../../lib/db/queries/index.js";
 import {
-	getLatestNeynarWebhookFromDb,
+	getNeynarWebhookByIdFromDb,
 	updateNeynarWebhookInDb,
 } from "../../../lib/db/queries/webhook.query.js";
+import { env } from "../../../lib/env.js";
 import {
 	getNeynarWebhookById,
 	updateNeynarWebhookTradeCreated,
 } from "../../../lib/neynar.js";
 import type { JobResult, UpdateUsersJobData } from "../../../types/index.js";
-
-const areSetsEqual = <T>(a: Set<T>, b: Set<T>): boolean => {
-	if (a.size !== b.size) return false;
-	for (const value of a) {
-		if (!b.has(value)) return false;
-	}
-	return true;
-};
 
 /**
  * Process update users job - add/remove users to/from neynar webhook
@@ -48,10 +42,11 @@ export const processUpdateUsersJob = async (
 		await job.updateProgress(5);
 
 		// get latest webhook from DB
-		const webhook = await getLatestNeynarWebhookFromDb();
+		const webhook = await getNeynarWebhookByIdFromDb(env.NEYNAR_WEBHOOK_ID);
 
 		// if no webhook saved in db, create a new webhook in neynar and save it to db
 		if (!webhook) {
+			console.error("[update-users-job] Neynar webhook not found in db");
 			throw new Error("Neynar webhook not found in db");
 		}
 		const neynarWebhook = await getNeynarWebhookById(webhook.neynarWebhookId);
@@ -103,20 +98,56 @@ export const processUpdateUsersJob = async (
 			removalsByResolvedGroup.set(resolved, list.concat(userIds));
 		}
 
-		// Calculate merged FIDs to apply to the webhook directly from inputs
-		const currentFids = Array.isArray(
+		// Calculate merged FIDs with reference counting so a fid stays on the webhook
+		// as long as at least one group is still tracking it after this job.
+		const currentWebhookFids = Array.isArray(
 			neynarWebhook.subscription.filters["trade.created"].fids,
 		)
 			? neynarWebhook.subscription.filters["trade.created"].fids
 			: [];
-		const newFidsSet = new Set<number>(currentFids);
-		for (const { fid } of addUsersInput) newFidsSet.add(fid);
-		for (const fid of removeFidsSet) newFidsSet.delete(fid);
-		const mergedFids = Array.from(newFidsSet);
+		const targetFids = new Set<number>(currentWebhookFids);
+
+		// Maps from userId -> fid
+		const addUserIdToFid = getUserIdToFidMap(addUsersInput);
+		const removeUserIdToFid = getUserIdToFidMap(removeUsersInput);
+
+		// Unique pair counts by fid
+		const addCountsByFid = computeAddCountsByFid(
+			trackingAddsResolved,
+			addUserIdToFid,
+		);
+		const removeCountsByFid = computeRemoveCountsByFid(
+			removalsByResolvedGroup,
+			removeUserIdToFid,
+		);
+
+		// Only recompute for fids actually affected in this job
+		const fidsToCheck = setsFromKeys(addCountsByFid, removeCountsByFid);
+		const baseCounts = await Promise.all(
+			Array.from(fidsToCheck).map(
+				async (fid) =>
+					[fid, await countGroupsTrackingUserByFarcasterFid(fid)] as const,
+			),
+		);
+		const baseCountByFid = new Map<number, number>(baseCounts);
+
+		for (const fid of fidsToCheck) {
+			const base = baseCountByFid.get(fid) ?? 0;
+			const addDelta = addCountsByFid.get(fid) ?? 0;
+			const removeDelta = removeCountsByFid.get(fid) ?? 0;
+			const resulting = base + addDelta - removeDelta;
+			if (resulting > 0) {
+				targetFids.add(fid);
+			} else {
+				targetFids.delete(fid);
+			}
+		}
+
+		const mergedFids = Array.from(targetFids);
 
 		// Check if webhook actually changes
-		const currentFidsSet = new Set<number>(currentFids);
-		const setsEqual = areSetsEqual(currentFidsSet, newFidsSet);
+		const currentFidsSet = new Set<number>(currentWebhookFids);
+		const setsEqual = areSetsEqual(currentFidsSet, targetFids);
 
 		if (setsEqual) {
 			// Webhook subscriptions unchanged; still ensure DB tracking updates
@@ -180,15 +211,108 @@ export const processUpdateUsersJob = async (
 			};
 		}
 
-		return {
-			status: "failed",
-			error: "Error creating new webhook",
-		};
+		console.error(
+			"[update-users-job] error in updating neynar webhook",
+			updatedWebhook,
+		);
+		throw new Error("Error updating the webhook");
 	} catch (error) {
 		console.error(`[update-users-job] Job ${job.id} failed:`, error);
-		return {
-			status: "failed",
-			error: `Error creating new webhook ${error}`,
-		};
+		throw error;
 	}
+};
+
+/**
+ *
+ * @param a - The first set
+ * @param b - The second set
+ * @returns True if the sets are equal, false otherwise
+ * @returns
+ */
+const areSetsEqual = <T>(a: Set<T>, b: Set<T>) => {
+	if (a.size !== b.size) return false;
+	return Array.from(a).every((value) => b.has(value));
+};
+
+/**
+ * Get a map from userId to fid
+ * @param users - The users to get the map from
+ * @returns A map from userId to fid
+ */
+const getUserIdToFidMap = (
+	users: Array<{ userId: string; fid: number | undefined }>,
+) => {
+	const map = new Map<string, number>();
+	for (const u of users) {
+		if (typeof u.fid === "number") {
+			map.set(u.userId, u.fid);
+		}
+	}
+	return map;
+};
+
+/**
+ * Compute the counts of fids by add users
+ * @param trackingAddsResolved - The tracking adds resolved
+ * @param addUserIdToFid - The map from userId to fid
+ * @returns The counts of fids by add users
+ */
+const computeAddCountsByFid = (
+	trackingAddsResolved: Array<{ groupId: string; userId: string }>,
+	addUserIdToFid: Map<string, number>,
+) => {
+	const seen = new Set<string>();
+	const counts = new Map<number, number>();
+	for (const row of trackingAddsResolved) {
+		const fid = addUserIdToFid.get(row.userId);
+		if (fid == null) {
+			continue;
+		}
+		const key = `${fid}:${row.groupId}`;
+		if (seen.has(key)) {
+			continue;
+		}
+		seen.add(key);
+		counts.set(fid, (counts.get(fid) ?? 0) + 1);
+	}
+	return counts;
+};
+
+/**
+ * Compute the counts of fids by remove users
+ * @param removalsByResolvedGroup - The removals by resolved group
+ * @param removeUserIdToFid - The map from userId to fid
+ * @returns The counts of fids by remove users
+ */
+const computeRemoveCountsByFid = (
+	removalsByResolvedGroup: Map<string, string[]>,
+	removeUserIdToFid: Map<string, number>,
+) => {
+	const seen = new Set<string>();
+	const counts = new Map<number, number>();
+	for (const [groupId, userIds] of removalsByResolvedGroup.entries()) {
+		for (const userId of userIds) {
+			const fid = removeUserIdToFid.get(userId);
+			if (fid == null) {
+				continue;
+			}
+			const key = `${fid}:${groupId}`;
+			if (seen.has(key)) {
+				continue;
+			}
+			seen.add(key);
+			counts.set(fid, (counts.get(fid) ?? 0) + 1);
+		}
+	}
+	return counts;
+};
+
+/**
+ * Get a set of keys from two maps
+ * @param mapA - The first map
+ * @param mapB - The second map
+ * @returns A set of keys
+ */
+const setsFromKeys = <K>(mapA: Map<K, unknown>, mapB: Map<K, unknown>) => {
+	return new Set<K>([...Array.from(mapA.keys()), ...Array.from(mapB.keys())]);
 };

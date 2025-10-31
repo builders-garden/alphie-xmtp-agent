@@ -1,22 +1,24 @@
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { NeynarWebhookSuccessResponse } from "../../../types/neynar.type.js";
 import { type NeynarWebhook, neynarWebhook } from "../db.schema.js";
 import { db } from "../index.js";
 
 /**
- * Get the latest neynar webhook
+ * Get a neynar webhook by ID from the database
+ * @param neynarWebhookId - The ID of the neynar webhook to get
  * @returns The latest neynar webhook
  */
-export const getLatestNeynarWebhookFromDb =
-	async (): Promise<NeynarWebhook | null> => {
-		const data = await db.query.neynarWebhook.findFirst({
-			orderBy: desc(neynarWebhook.id),
-		});
-		if (!data) {
-			return null;
-		}
-		return data;
-	};
+export const getNeynarWebhookByIdFromDb = async (
+	neynarWebhookId: string,
+): Promise<NeynarWebhook | undefined> => {
+	const data = await db.query.neynarWebhook.findFirst({
+		where: eq(neynarWebhook.neynarWebhookId, neynarWebhookId),
+	});
+	if (!data) {
+		return undefined;
+	}
+	return data;
+};
 
 /**
  * Update a neynar webhook in the database

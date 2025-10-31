@@ -44,6 +44,7 @@ const envSchema = z.object({
 
 	// Neynar, get yours at https://dev.neynar.com
 	NEYNAR_API_KEY: z.string().min(1),
+	NEYNAR_WEBHOOK_ID: z.string().min(1),
 	NEYNAR_WEBHOOK_SECRET: z.string().min(1),
 
 	// OpenAI, get yours at https://platform.openai.com
