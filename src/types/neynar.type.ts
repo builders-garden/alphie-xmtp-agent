@@ -92,7 +92,8 @@ export const tokenBalanceSchema = z.object({
 		total_supply: z.string().nullable(),
 	}),
 	balance: z.object({
-		in_usdc: z.number().nullable(),
+		in_usdc: z.number().nullable().optional(),
+		in_usd: z.number().nullable().optional(),
 		in_token: z.string().nullable(),
 	}),
 });
@@ -118,8 +119,10 @@ export const webhookTradeCreatedSchema = z.object({
 			}),
 			net_transfer: z.object({
 				object: z.literal("net_transfer"),
-				receiving_token: tokenBalanceSchema,
-				sending_token: tokenBalanceSchema,
+				receiving_token: tokenBalanceSchema.optional(),
+				sending_token: tokenBalanceSchema.optional(),
+				receiving_fungible: tokenBalanceSchema.optional(),
+				sending_fungible: tokenBalanceSchema.optional(),
 			}),
 		}),
 	}),

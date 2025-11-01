@@ -51,6 +51,25 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 
 		// Add job to queue
 		const chain = getChainByName(transaction.network.name);
+		const receivingToken =
+			transaction.net_transfer.receiving_token ??
+			transaction.net_transfer.receiving_fungible;
+		const sendingToken =
+			transaction.net_transfer.sending_token ??
+			transaction.net_transfer.sending_fungible;
+
+		if (!receivingToken || !sendingToken) {
+			console.error(
+				"[neynar-controller] No token found from neynar webhooktransaction",
+				transaction,
+			);
+			res.status(200).json({
+				status: "failed",
+				error: "No token found in transaction",
+			});
+			return;
+		}
+
 		const job = await neynarWebhookQueue.add(
 			"process-neynar-webhook",
 			{
@@ -60,24 +79,20 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 				transaction: {
 					chainId: chain.id,
 					transactionHash: transaction.hash as Hex,
-					buyToken: transaction.net_transfer.receiving_token.token
-						.address as Address,
-					sellToken: transaction.net_transfer.sending_token.token
-						.address as Address,
-					sellAmount:
-						transaction.net_transfer.sending_token.balance.in_token ?? "0",
+					buyToken: receivingToken.token.address as Address,
+					sellToken: sendingToken.token.address as Address,
+					sellAmount: sendingToken.balance.in_token ?? "0",
 					sellAmountUsd:
-						transaction.net_transfer.sending_token.balance.in_usdc?.toString() ??
-						"0",
-					buyAmount:
-						transaction.net_transfer.receiving_token.balance.in_token ?? "0",
+						(
+							sendingToken.balance.in_usdc ?? sendingToken.balance.in_usd
+						)?.toString() ?? "0",
+					buyAmount: receivingToken.balance.in_token ?? "0",
 					buyAmountUsd:
-						transaction.net_transfer.receiving_token.balance.in_usdc?.toString() ??
-						"0",
-					sellAmountTotSupply:
-						transaction.net_transfer.sending_token.token.total_supply ?? "0",
-					buyAmountTotSupply:
-						transaction.net_transfer.receiving_token.token.total_supply ?? "0",
+						(
+							receivingToken.balance.in_usdc ?? receivingToken.balance.in_usd
+						)?.toString() ?? "0",
+					sellAmountTotSupply: sendingToken.token.total_supply ?? "0",
+					buyAmountTotSupply: receivingToken.token.total_supply ?? "0",
 				},
 			},
 			{
