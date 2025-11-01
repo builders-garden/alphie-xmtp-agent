@@ -81,6 +81,23 @@ export const userDehydratedSchema = z.object({
 	score: z.number(),
 });
 
+export const tokenBalanceSchemaOld = z.object({
+	object: z.literal("token_balance"),
+	token: z.object({
+		object: z.literal("token"),
+		address: z.string(),
+		decimals: z.number(),
+		symbol: z.string(),
+		name: z.string(),
+		total_supply: z.string().nullable(),
+	}),
+	balance: z.object({
+		in_usdc: z.number().nullable(),
+		in_token: z.string().nullable(),
+	}),
+});
+export type TokenBalanceOld = z.infer<typeof tokenBalanceSchemaOld>;
+
 export const tokenBalanceSchema = z.object({
 	object: z.literal("token_balance"),
 	token: z.object({
@@ -92,11 +109,11 @@ export const tokenBalanceSchema = z.object({
 		total_supply: z.string().nullable(),
 	}),
 	balance: z.object({
-		in_usdc: z.number().nullable().optional(),
-		in_usd: z.number().nullable().optional(),
+		in_usd: z.number().nullable(),
 		in_token: z.string().nullable(),
 	}),
 });
+export type TokenBalance = z.infer<typeof tokenBalanceSchema>;
 
 export const poolSchema = z.object({
 	object: z.literal("pool"),
@@ -104,6 +121,30 @@ export const poolSchema = z.object({
 	protocol_family: z.string().optional(),
 	protocol_version: z.string().optional(),
 });
+
+export const webhookTradeCreatedSchemaOld = z.object({
+	type: z.literal("trade.created"),
+	data: z.object({
+		object: z.literal("trade"),
+		trader: userDehydratedSchema.nullable(),
+		pool: poolSchema,
+		transaction: z.object({
+			hash: z.string(),
+			network: z.object({
+				object: z.literal("network"),
+				name: z.string(),
+			}),
+			net_transfer: z.object({
+				object: z.literal("net_transfer"),
+				receiving_token: tokenBalanceSchemaOld,
+				sending_token: tokenBalanceSchema,
+			}),
+		}),
+	}),
+});
+export type WebhookTradeCreatedOld = z.infer<
+	typeof webhookTradeCreatedSchemaOld
+>;
 
 export const webhookTradeCreatedSchema = z.object({
 	type: z.literal("trade.created"),
@@ -119,16 +160,25 @@ export const webhookTradeCreatedSchema = z.object({
 			}),
 			net_transfer: z.object({
 				object: z.literal("net_transfer"),
-				receiving_token: tokenBalanceSchema.optional(),
-				sending_token: tokenBalanceSchema.optional(),
-				receiving_fungible: tokenBalanceSchema.optional(),
-				sending_fungible: tokenBalanceSchema.optional(),
+				receiving_fungible: tokenBalanceSchema,
+				sending_fungible: tokenBalanceSchema,
 			}),
 		}),
 	}),
 });
 
 export type WebhookTradeCreated = z.infer<typeof webhookTradeCreatedSchema>;
+
+/**
+ * Temp fix for the merge of the old and new webhook trade created schema
+ */
+export const webhookTradeCreatedMergeSchema = z.union([
+	webhookTradeCreatedSchema,
+	webhookTradeCreatedSchemaOld,
+]);
+export type WebhookTradeCreatedMerge = z.infer<
+	typeof webhookTradeCreatedMergeSchema
+>;
 
 /**
  * Other webhook events
@@ -149,7 +199,7 @@ export const allWebhookEventsSchema = z.union([
 	webhookCastCreatedSchema,
 	webhookUserCreatedSchema,
 	webhookUserUpdatedSchema,
-	webhookTradeCreatedSchema,
+	webhookTradeCreatedMergeSchema,
 ]);
 
 export type WebhookEvent = z.infer<typeof allWebhookEventsSchema>;

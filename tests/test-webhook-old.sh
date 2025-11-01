@@ -16,7 +16,7 @@ curl -X POST $BACKEND_URL/api/v1/neynar/webhooks \
         "network": { "object": "network", "name": "base" },
         "net_transfer": {
           "object": "net_transfer",
-          "receiving_fungible": {
+          "receiving_token": {
             "object": "token_balance",
             "token": {
               "object": "token",
@@ -25,9 +25,9 @@ curl -X POST $BACKEND_URL/api/v1/neynar/webhooks \
               "symbol": "ZORA",
               "name": "Zora"
             },
-            "balance": { "in_usd": 1, "in_token": "1" }
+            "balance": { "in_usdc": 1, "in_token": "1" }
           },
-          "sending_fungible": {
+          "sending_token": {
             "object": "token_balance",
             "token": {
               "object": "token",
@@ -36,7 +36,7 @@ curl -X POST $BACKEND_URL/api/v1/neynar/webhooks \
               "symbol": "USDC",
               "name": "USD Coin"
             },
-            "balance": { "in_usd": 1, "in_token": "1" }
+            "balance": { "in_usdc": 1, "in_token": "1" }
           }
         }
       }

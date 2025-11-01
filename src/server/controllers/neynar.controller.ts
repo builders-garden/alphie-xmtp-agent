@@ -7,6 +7,7 @@ import type {
 	JobResult,
 	NeynarWebhookJobData,
 } from "../../types/index.js";
+import type { TokenBalance, TokenBalanceOld } from "../../types/neynar.type.js";
 import { allWebhookEventsSchema } from "../../types/neynar.type.js";
 import { getChainByName } from "../../utils/viem.util.js";
 import { neynarWebhookQueue } from "../bullmq/queues/neynar.queue.js";
@@ -51,12 +52,19 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 
 		// Add job to queue
 		const chain = getChainByName(transaction.network.name);
-		const receivingToken =
-			transaction.net_transfer.receiving_token ??
-			transaction.net_transfer.receiving_fungible;
-		const sendingToken =
-			transaction.net_transfer.sending_token ??
-			transaction.net_transfer.sending_fungible;
+
+		let receivingToken: TokenBalance | TokenBalanceOld | undefined;
+		let sendingToken: TokenBalance | TokenBalanceOld | undefined;
+		if ("receiving_token" in transaction.net_transfer) {
+			receivingToken = transaction.net_transfer.receiving_token;
+		} else if ("receiving_fungible" in transaction.net_transfer) {
+			receivingToken = transaction.net_transfer.receiving_fungible;
+		}
+		if ("sending_token" in transaction.net_transfer) {
+			sendingToken = transaction.net_transfer.sending_token;
+		} else if ("sending_fungible" in transaction.net_transfer) {
+			sendingToken = transaction.net_transfer.sending_fungible;
+		}
 
 		if (!receivingToken || !sendingToken) {
 			console.error(
@@ -70,6 +78,16 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 			return;
 		}
 
+		// Normalize USD values across old/new webhook schemas
+		const sellAmountUsdVal =
+			"in_usd" in sendingToken.balance
+				? sendingToken.balance.in_usd
+				: sendingToken.balance.in_usdc;
+		const buyAmountUsdVal =
+			"in_usd" in receivingToken.balance
+				? receivingToken.balance.in_usd
+				: receivingToken.balance.in_usdc;
+
 		const job = await neynarWebhookQueue.add(
 			"process-neynar-webhook",
 			{
@@ -82,15 +100,9 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 					buyToken: receivingToken.token.address as Address,
 					sellToken: sendingToken.token.address as Address,
 					sellAmount: sendingToken.balance.in_token ?? "0",
-					sellAmountUsd:
-						(
-							sendingToken.balance.in_usdc ?? sendingToken.balance.in_usd
-						)?.toString() ?? "0",
+					sellAmountUsd: sellAmountUsdVal?.toString() ?? "0",
 					buyAmount: receivingToken.balance.in_token ?? "0",
-					buyAmountUsd:
-						(
-							receivingToken.balance.in_usdc ?? receivingToken.balance.in_usd
-						)?.toString() ?? "0",
+					buyAmountUsd: buyAmountUsdVal?.toString() ?? "0",
 					sellAmountTotSupply: sendingToken.token.total_supply ?? "0",
 					buyAmountTotSupply: receivingToken.token.total_supply ?? "0",
 				},
