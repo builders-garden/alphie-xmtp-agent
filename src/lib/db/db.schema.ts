@@ -7,6 +7,7 @@ import {
 	text,
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import { ulid } from "ulid";
 import type { FarcasterNotificationDetails } from "../../types/farcaster.type.js";
 import type { DurableActionType } from "../../types/xmtp.types.js";
 
@@ -14,7 +15,9 @@ import type { DurableActionType } from "../../types/xmtp.types.js";
  * Better Auth Tables
  */
 export const user = sqliteTable("user", {
-	id: text("id").primaryKey(),
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => ulid()),
 	name: text("name").notNull(),
 	email: text("email").notNull().unique(),
 	emailVerified: integer("email_verified", { mode: "boolean" })
@@ -35,7 +38,9 @@ export const user = sqliteTable("user", {
 });
 
 export const session = sqliteTable("session", {
-	id: text("id").primaryKey(),
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => ulid()),
 	expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
 	token: text("token").notNull().unique(),
 	ipAddress: text("ip_address"),
@@ -54,7 +59,9 @@ export const session = sqliteTable("session", {
 });
 
 export const account = sqliteTable("account", {
-	id: text("id").primaryKey(),
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => ulid()),
 	accountId: text("account_id").notNull(),
 	providerId: text("provider_id").notNull(),
 	userId: text("user_id")
@@ -81,7 +88,9 @@ export const account = sqliteTable("account", {
 });
 
 export const verification = sqliteTable("verification", {
-	id: text("id").primaryKey(),
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => ulid()),
 	identifier: text("identifier").notNull(),
 	value: text("value").notNull(),
 	expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
@@ -97,21 +106,10 @@ export const verification = sqliteTable("verification", {
 /**
  * Better Auth Farcaster Plugin Tables
  */
-export const walletAddress = sqliteTable("wallet_address", {
-	id: text("id").primaryKey(),
-	userId: text("user_id")
-		.notNull()
-		.references(() => user.id, { onDelete: "cascade" }),
-	address: text("address").notNull().unique(),
-	chainId: integer("chain_id").default(1), // ethereum mainnet
-	isPrimary: integer("is_primary", { mode: "boolean" }).default(false),
-	createdAt: integer("created_at", { mode: "timestamp_ms" })
-		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-		.notNull(),
-});
-
 export const farcaster = sqliteTable("farcaster", {
-	id: text("id").primaryKey(),
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => ulid()),
 	userId: text("user_id")
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
@@ -365,10 +363,6 @@ export type CreateGroupMember = typeof groupMember.$inferInsert;
 export type GroupTrackedUser = typeof groupTrackedUser.$inferSelect;
 export type CreateGroupTrackedUser = typeof groupTrackedUser.$inferInsert;
 
-export type WalletAddress = typeof walletAddress.$inferSelect;
-export type CreateWalletAddress = typeof walletAddress.$inferInsert;
-export type UpdateWalletAddress = Partial<CreateWalletAddress>;
-
 export type Farcaster = typeof farcaster.$inferSelect;
 export type CreateFarcaster = typeof farcaster.$inferInsert;
 export type UpdateFarcaster = Partial<CreateFarcaster>;
@@ -404,7 +398,6 @@ export type UpdateInlineActionInteraction =
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),
-	walletAddresses: many(walletAddress),
 	farcasters: many(farcaster),
 	groupMembers: many(groupMember),
 	activities: many(userActivity),
@@ -420,13 +413,6 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
 	user: one(user, {
 		fields: [account.userId],
-		references: [user.id],
-	}),
-}));
-
-export const walletAddressRelations = relations(walletAddress, ({ one }) => ({
-	user: one(user, {
-		fields: [walletAddress.userId],
 		references: [user.id],
 	}),
 }));
@@ -449,6 +435,10 @@ export const groupMemberRelations = relations(groupMember, ({ one }) => ({
 		fields: [groupMember.userId],
 		references: [user.id],
 	}),
+	farcaster: one(farcaster, {
+		fields: [groupMember.userId],
+		references: [farcaster.userId],
+	}),
 	group: one(group, {
 		fields: [groupMember.groupId],
 		references: [group.id],
@@ -466,6 +456,10 @@ export const groupTrackedUserRelations = relations(
 			fields: [groupTrackedUser.userId],
 			references: [user.id],
 		}),
+		farcaster: one(farcaster, {
+			fields: [groupTrackedUser.userId],
+			references: [farcaster.userId],
+		}),
 		addedBy: one(user, {
 			fields: [groupTrackedUser.addedByUserId],
 			references: [user.id],
@@ -477,6 +471,10 @@ export const userActivityRelations = relations(userActivity, ({ one }) => ({
 	user: one(user, {
 		fields: [userActivity.userId],
 		references: [user.id],
+	}),
+	farcaster: one(farcaster, {
+		fields: [userActivity.userId],
+		references: [farcaster.userId],
 	}),
 	sellToken: one(tokens, {
 		fields: [userActivity.sellTokenId],

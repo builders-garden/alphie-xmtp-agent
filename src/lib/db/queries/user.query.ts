@@ -5,12 +5,12 @@ import type { Address } from "viem";
 import { formatAvatarSrc } from "../../../utils/index.js";
 import { fetchUserByAddress } from "../../neynar.js";
 import {
+	account,
 	type CreateUser,
 	type Farcaster,
 	farcaster,
 	type User,
 	user,
-	walletAddress,
 } from "../db.schema.js";
 import { db } from "../index.js";
 
@@ -112,19 +112,7 @@ const createUserFromAddress = async (
 					),
 				);
 		}
-		// Ensure wallet address exists
-		if (address) {
-			await db
-				.insert(walletAddress)
-				.values({
-					id: ulid(),
-					userId: existingFc.user.id,
-					address,
-					chainId: 1,
-					isPrimary: false,
-				})
-				.onConflictDoNothing();
-		}
+
 		return { ...existingFc.user, farcaster: existingFc };
 	}
 
@@ -143,19 +131,6 @@ const createUserFromAddress = async (
 				image: farcasterAvatarUrl ?? undefined,
 			})
 			.returning();
-
-		if (address) {
-			await tx
-				.insert(walletAddress)
-				.values({
-					id: ulid(),
-					userId: createdUser.id,
-					address,
-					chainId: 1,
-					isPrimary: true,
-				})
-				.onConflictDoNothing();
-		}
 
 		const ensuredFarcasterFid: number = farcasterFid;
 		if (!address) {
@@ -177,7 +152,23 @@ const createUserFromAddress = async (
 			})
 			.returning();
 
-		return { ...createdUser, farcaster: createdFarcaster ?? undefined };
+		const [createdAccount] = await tx
+			.insert(account)
+			.values({
+				id: ulid(),
+				userId: createdUser.id,
+				providerId: "farcaster",
+				accountId: `farcaster:${farcasterFid}`,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.returning();
+
+		return {
+			...createdUser,
+			farcaster: createdFarcaster ?? undefined,
+			account: createdAccount ?? undefined,
+		};
 	});
 };
 

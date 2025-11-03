@@ -19,7 +19,10 @@ export const handleUpdateTrackings = async (req: Request, res: Response) => {
 	try {
 		const parseBody = updateUsersJobDataSchema.safeParse(req.body);
 		if (!parseBody.success) {
-			console.error("Invalid request body", parseBody.error.message);
+			console.error(
+				"[update-trackings] Invalid request body",
+				parseBody.error.message,
+			);
 			res.status(400).json({
 				status: "nok",
 				error: "Invalid request",
