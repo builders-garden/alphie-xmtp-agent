@@ -24,6 +24,9 @@ export const user = sqliteTable("user", {
 		.default(false)
 		.notNull(),
 	image: text("image"),
+	farcasterFid: integer("farcaster_fid").unique(),
+	farcasterUsername: text("farcaster_username"),
+	farcasterDisplayName: text("farcaster_display_name"),
 	role: text("role"),
 	banned: integer("banned", { mode: "boolean" }).default(false),
 	banReason: text("ban_reason"),
@@ -78,6 +81,9 @@ export const account = sqliteTable("account", {
 	}),
 	scope: text("scope"),
 	password: text("password"),
+	farcasterFid: integer("farcaster_fid").unique(),
+	farcasterUsername: text("farcaster_username"),
+	farcasterDisplayName: text("farcaster_display_name"),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),
@@ -349,6 +355,10 @@ export const neynarWebhook = sqliteTable("neynar_webhook", {
 /**
  * Drizzle Types
  */
+export type Account = typeof account.$inferSelect;
+export type CreateAccount = typeof account.$inferInsert;
+export type UpdateAccount = Partial<CreateAccount>;
+
 export type User = typeof user.$inferSelect;
 export type CreateUser = typeof user.$inferInsert;
 export type UpdateUser = Partial<CreateUser>;
