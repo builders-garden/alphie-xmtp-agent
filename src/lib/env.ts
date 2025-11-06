@@ -68,8 +68,8 @@ const envSchema = z.object({
 		.default("false")
 		.transform((s) => s === "true"),
 
-	// Coingecko.com api key, get yours at https://www.coingecko.com/en/developers/dashboard
-	COINGECKO_API_KEY: z.string().min(1),
+	// Codex.io api key, get yours at https://codex.io
+	CODEX_API_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

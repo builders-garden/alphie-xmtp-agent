@@ -22,6 +22,7 @@ import {
 	handleNotFound,
 } from "./server/middleware/error.middleware.js";
 import responseMiddleware from "./server/middleware/response.js";
+import fixRoutes from "./server/routes/fix.route.js";
 import neynarRoutes from "./server/routes/neynar.route.js";
 import trackingsRoutes from "./server/routes/trackings.route.js";
 import { ContentTypeActions } from "./types/index.js";
@@ -87,6 +88,7 @@ async function main() {
 
 	app.use("/api/v1/neynar", verifyNeynarSignatureMiddleware, neynarRoutes);
 	app.use("/api/v1/trackings", verifyApiKeyMiddleware, trackingsRoutes);
+	app.use("/api/v1/tokens", verifyApiKeyMiddleware, fixRoutes);
 
 	// Use custom middlewares for handling 404 and errors
 	app.use(handleNotFound);

@@ -222,7 +222,7 @@ export const userActivity = sqliteTable(
 	"user_activity",
 	{
 		chainId: integer("chain_id", { mode: "number" }).notNull(),
-		txHash: text("tx_hash").notNull(),
+		txHash: text("tx_hash").notNull().unique(),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),

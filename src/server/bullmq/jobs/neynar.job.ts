@@ -1,7 +1,7 @@
 import type { Job } from "bullmq";
 import { ulid } from "ulid";
 import type { Address } from "viem";
-import { getCoingeckoTokenInfo } from "../../../lib/coingecko.js";
+import { getTokenInfoFromCodex } from "../../../lib/codex.js";
 import { saveActivityForMultipleGroups } from "../../../lib/db/queries/group-activity.query.js";
 import {
 	getGroupsTrackingUserByFarcasterFid,
@@ -112,10 +112,10 @@ export const processNeynarWebhookJob = async (
 
 		// get token info from onchain and save in db
 		if (!sellToken || !buyToken) {
-			const [sellTokenCoingeckoInfo, buyTokenCoingeckoInfo, onchainTokenInfo] =
+			const [sellTokenCodexInfo, buyTokenCodexInfo, onchainTokenInfo] =
 				await Promise.all([
-					getCoingeckoTokenInfo("base", transaction.sellToken),
-					getCoingeckoTokenInfo("base", transaction.buyToken),
+					getTokenInfoFromCodex(transaction.sellToken, transaction.chainId),
+					getTokenInfoFromCodex(transaction.buyToken, transaction.chainId),
 					getTokenInfo({
 						sellTokenAddress: transaction.sellToken,
 						buyTokenAddress: transaction.buyToken,
@@ -131,8 +131,8 @@ export const processNeynarWebhookJob = async (
 					symbol: onchainTokenInfo.sellSymbol,
 					name: onchainTokenInfo.sellSymbol ?? "Unknown",
 					decimals: onchainTokenInfo.tokenDecimals ?? 18,
-					imageUrl: sellTokenCoingeckoInfo
-						? sellTokenCoingeckoInfo.image.large
+					imageUrl: sellTokenCodexInfo?.info?.imageLargeUrl
+						? sellTokenCodexInfo.info.imageLargeUrl
 						: undefined,
 				});
 			}
@@ -145,8 +145,8 @@ export const processNeynarWebhookJob = async (
 					symbol: onchainTokenInfo.buySymbol,
 					name: onchainTokenInfo.buySymbol ?? "Unknown",
 					decimals: onchainTokenInfo.tokenDecimals ?? 18,
-					imageUrl: buyTokenCoingeckoInfo
-						? buyTokenCoingeckoInfo.image.large
+					imageUrl: buyTokenCodexInfo?.info?.imageLargeUrl
+						? buyTokenCodexInfo.info.imageLargeUrl
 						: undefined,
 				});
 			}
