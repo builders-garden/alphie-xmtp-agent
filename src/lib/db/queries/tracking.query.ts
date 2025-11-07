@@ -1,5 +1,5 @@
-import { and, countDistinct, eq, inArray, or } from "drizzle-orm";
-import { group, groupTrackedUser } from "../db.schema.js";
+import { and, countDistinct, eq, inArray } from "drizzle-orm";
+import { groupTrackedUser } from "../db.schema.js";
 import { db } from "../index.js";
 import { getGroupByConversationId } from "./group.query.js";
 import { getUserByFarcasterFid, getUserByInboxId } from "./user.query.js";
