@@ -20,6 +20,7 @@ import {
 	getEncryptionKeyFromString,
 	getXmtpActions,
 	sendActions,
+	sendTestNeynarTradeCreatedWebhook,
 } from "../../utils/index.js";
 import { ActionsCodec } from "../../utils/xmtp/actions-codec.js";
 import { IntentCodec } from "../../utils/xmtp/intent-content.js";
@@ -134,6 +135,13 @@ export const handleXmtpMessage = async (
 
 			// Handle reply to the agent
 			const messageContent = extractMessageContent(ctx.message);
+
+			if (messageContent.toLowerCase() === "/test") {
+				await thinkingContext.helpers.addThinkingEmoji();
+				await sendTestNeynarTradeCreatedWebhook(group.id);
+				return;
+			}
+
 			const isSendHelpHint = shouldSendHelpHint(messageContent);
 			const shouldRespond = await shouldRespondToMessage({
 				message: ctx.message,

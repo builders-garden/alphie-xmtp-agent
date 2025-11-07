@@ -1,6 +1,7 @@
 import express from "express";
 import {
 	checkJobStatus,
+	handleTestWebhookGroupEvent,
 	handleWebhookEvent,
 } from "../controllers/neynar.controller.js";
 
@@ -17,6 +18,7 @@ router.head("/webhooks", (_req, res) => {
 	res.json({ status: "ok" });
 });
 router.post("/webhooks", handleWebhookEvent);
+router.post("/webhooks/test", handleTestWebhookGroupEvent);
 router.get("/webhook/status/:jobId", checkJobStatus);
 
 export default router;

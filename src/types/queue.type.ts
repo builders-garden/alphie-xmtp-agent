@@ -25,6 +25,7 @@ export interface NeynarWebhookJobData {
 	user: HandleCopyTradeSchema["user"];
 	transaction: HandleCopyTradeSchema["transaction"];
 	rawTransaction: string;
+	groupId?: string;
 }
 
 const jobResultSuccessSchema = z.object({

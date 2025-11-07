@@ -32,7 +32,7 @@ import { getTokenPriceAndFdv } from "../../../utils/token.util.js";
 export const processNeynarWebhookJob = async (
 	job: Job<NeynarWebhookJobData>,
 ): Promise<JobResult> => {
-	const { user, transaction, rawTransaction } = job.data;
+	const { user, transaction, rawTransaction, groupId } = job.data;
 	let progress = 5;
 
 	console.log(
@@ -71,7 +71,7 @@ export const processNeynarWebhookJob = async (
 		}
 
 		// get groups that are tracking the user
-		const groups = await getGroupsTrackingUserByFarcasterFid(user.fid);
+		const groups = await getGroupsTrackingUserByFarcasterFid(user.fid, groupId);
 		if (groups.length === 0) {
 			await job.updateProgress(100);
 			console.log(

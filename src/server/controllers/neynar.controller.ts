@@ -11,7 +11,10 @@ import type {
 	FungibleBalance,
 	TokenBalanceOld,
 } from "../../types/neynar.type.js";
-import { allWebhookEventsSchema } from "../../types/neynar.type.js";
+import {
+	allWebhookEventsSchema,
+	testWebhookGroupTradeCreatedSchema,
+} from "../../types/neynar.type.js";
 import { getChainByName } from "../../utils/viem.util.js";
 import { neynarWebhookQueue } from "../bullmq/queues/neynar.queue.js";
 
@@ -109,6 +112,126 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 				user: {
 					fid: trader.fid,
 				},
+				transaction: {
+					chainId: chain.id,
+					transactionHash: transaction.hash as Hex,
+					buyToken: receivingToken.token.address as Address,
+					sellToken: sendingToken.token.address as Address,
+					sellAmount: sendingToken.balance.in_token ?? "0",
+					sellAmountUsd: sellAmountUsdVal?.toString() ?? "0",
+					buyAmount: receivingToken.balance.in_token ?? "0",
+					buyAmountUsd: buyAmountUsdVal?.toString() ?? "0",
+					sellAmountTotSupply: sendingToken.token.total_supply ?? "0",
+					buyAmountTotSupply: receivingToken.token.total_supply ?? "0",
+				},
+				rawTransaction: JSON.stringify(transaction),
+			},
+			{
+				jobId,
+				attempts: 3,
+				backoff: {
+					type: "exponential",
+					delay: 2000,
+				},
+			},
+		);
+
+		// Return immediately with job information
+		res.status(202).json({
+			jobId: job.id,
+			status: "queued",
+			message: "Copy trade job elaboration has been queued",
+		});
+	} catch (error) {
+		console.error("Error handling copy trade", error);
+		res.status(500).json({
+			status: "error",
+			error: "Internal server error",
+		});
+	}
+};
+
+/**
+ * Test copy trade controller for a specific group
+ * @param req - The request object
+ * @param res - The response object
+ * @returns void
+ */
+export const handleTestWebhookGroupEvent = async (
+	req: Request,
+	res: Response,
+) => {
+	try {
+		const parseBody = testWebhookGroupTradeCreatedSchema.safeParse(req.body);
+		if (!parseBody.success) {
+			console.error("Invalid request body", parseBody.error.message);
+			res.status(400).json({
+				status: "error",
+				error: "Invalid request",
+			});
+			return;
+		}
+
+		const webhookEvent = parseBody.data;
+
+		const { groupId } = webhookEvent;
+		const { trader, transaction } = webhookEvent.data;
+		const jobId = ulid();
+		if (!trader) {
+			res.status(200).json({
+				status: "success",
+				message: "Trader is required to continue",
+			});
+			return;
+		}
+
+		// Add job to queue
+		const chain = getChainByName(transaction.network.name);
+
+		let receivingToken: FungibleBalance | undefined;
+		let sendingToken: FungibleBalance | undefined;
+		if (transaction.net_transfer) {
+			if ("receiving_fungible" in transaction.net_transfer) {
+				receivingToken = transaction.net_transfer.receiving_fungible;
+			}
+			if ("sending_fungible" in transaction.net_transfer) {
+				sendingToken = transaction.net_transfer.sending_fungible;
+			}
+		} else {
+			console.error(
+				"[neynar-controller] No net transfer found in transaction",
+				transaction,
+			);
+			res.status(500).json({
+				status: "failed",
+				error: "No net transfer found in transaction",
+			});
+			return;
+		}
+
+		if (!receivingToken || !sendingToken) {
+			console.error(
+				"[neynar-controller] No token found from neynar webhooktransaction",
+				transaction,
+			);
+			res.status(200).json({
+				status: "failed",
+				error: "No token found in transaction",
+			});
+			return;
+		}
+
+		// Normalize USD values across old/new webhook schemas
+		const sellAmountUsdVal = sendingToken.balance.in_usd;
+		const buyAmountUsdVal = receivingToken.balance.in_usd;
+
+		const job = await neynarWebhookQueue.add(
+			"process-neynar-webhook",
+			{
+				user: {
+					fid: trader.fid,
+				},
+				groupId,
 				transaction: {
 					chainId: chain.id,
 					transactionHash: transaction.hash as Hex,

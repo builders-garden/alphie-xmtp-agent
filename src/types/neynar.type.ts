@@ -137,6 +137,14 @@ export type WebhookTradeCreatedOld = z.infer<
 const webhookTradeCreatedSchema = z.custom<TradeWebhookPayload>();
 export type WebhookTradeCreated = z.infer<typeof webhookTradeCreatedSchema>;
 
+/** Test endpoint schema */
+export const testWebhookGroupTradeCreatedSchema = z.custom<
+	TradeWebhookPayload & { groupId: string }
+>();
+
+export type TestWebhookGroupTradeCreated = z.infer<
+	typeof testWebhookGroupTradeCreatedSchema
+>;
 /**
  * Temp fix for the merge of the old and new webhook trade created schema
  */

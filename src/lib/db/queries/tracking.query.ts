@@ -1,4 +1,4 @@
-import { and, countDistinct, eq, inArray } from "drizzle-orm";
+import { and, countDistinct, eq, inArray, or } from "drizzle-orm";
 import { groupTrackedUser } from "../db.schema.js";
 import { db } from "../index.js";
 import { getGroupByConversationId } from "./group.query.js";
@@ -100,12 +100,21 @@ export const countGroupsTrackingUserByFarcasterFid = async (fid: number) => {
  * @param userId - The user id
  * @returns The groups tracking the user
  */
-export const getGroupsTrackingUserByUserId = async (userId: string) => {
+export const getGroupsTrackingUserByUserId = async (
+	userId: string,
+	groupId?: string,
+) => {
 	if (!userId) {
 		return [];
 	}
+	const whereClause = groupId
+		? or(
+				eq(groupTrackedUser.groupId, groupId),
+				eq(groupTrackedUser.userId, userId),
+			)
+		: eq(groupTrackedUser.userId, userId);
 	const data = await db.query.groupTrackedUser.findMany({
-		where: eq(groupTrackedUser.userId, userId),
+		where: whereClause,
 		with: {
 			group: true,
 		},
@@ -116,9 +125,13 @@ export const getGroupsTrackingUserByUserId = async (userId: string) => {
 /**
  * Get groups tracking a user by Farcaster FID
  * @param fid - The Farcaster FID of the user
+ * @param groupId - Optional group id to filter by
  * @returns The groups tracking the user
  */
-export const getGroupsTrackingUserByFarcasterFid = async (fid: number) => {
+export const getGroupsTrackingUserByFarcasterFid = async (
+	fid: number,
+	groupId?: string,
+) => {
 	if (fid < 0) {
 		console.error(`[getGroupsTrackingUserByFarcasterFid] Invalid fid ${fid}`);
 		return [];
@@ -130,5 +143,5 @@ export const getGroupsTrackingUserByFarcasterFid = async (fid: number) => {
 		);
 		return [];
 	}
-	return getGroupsTrackingUserByUserId(user.id);
+	return getGroupsTrackingUserByUserId(user.id, groupId);
 };

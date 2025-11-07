@@ -21,6 +21,7 @@ const envSchema = z.object({
 		.default("production"),
 
 	// Backend API Key Secret, used in frontend to authenticate requests
+	BACKEND_URL: z.url().min(1),
 	API_KEY_SECRET: z.string().min(1),
 
 	// XMTP Agent
