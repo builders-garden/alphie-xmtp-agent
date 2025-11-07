@@ -30,8 +30,8 @@ importers:
         specifier: ^0.15.15
         version: 0.15.15(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       '@neynar/nodejs-sdk':
-        specifier: ^3.81.1
-        version: 3.81.1(@types/node@24.9.1)(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)
+        specifier: ^3.81.2
+        version: 3.81.2(@types/node@24.9.1)(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)
       '@t3-oss/env-core':
         specifier: ^0.13.8
         version: 0.13.8(typescript@5.9.3)(zod@4.1.12)
@@ -955,8 +955,8 @@ packages:
       '@nestjs/websockets':
         optional: true
 
-  '@neynar/nodejs-sdk@3.81.1':
-    resolution: {integrity: sha512-a7+G5dOZc8lrxe8MeXPaWnJvK1/8S3YWBjgWqsRt8dlBO3v7CFpc4b0ZT/Iq2zUFjoWTTyr5DbF4v2AN76mesQ==}
+  '@neynar/nodejs-sdk@3.81.2':
+    resolution: {integrity: sha512-j9SIPKzVSv+cJnZBbMKWuGjHUhzV6OBnR9NyD66VNkLC8yREylB6ha1SRDytUub8aI2oNA9r0yaq8L1eSRkcWA==}
     engines: {node: '>=19.9.0'}
 
   '@noble/ciphers@1.2.1':
@@ -5074,7 +5074,7 @@ snapshots:
       tslib: 2.8.1
       uid: 2.0.2
 
-  '@neynar/nodejs-sdk@3.81.1(@types/node@24.9.1)(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)':
+  '@neynar/nodejs-sdk@3.81.2(@types/node@24.9.1)(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)':
     dependencies:
       '@openapitools/openapi-generator-cli': 2.25.0(@types/node@24.9.1)
       axios: 1.13.2

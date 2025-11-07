@@ -61,27 +61,15 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 
 		let receivingToken: FungibleBalance | TokenBalanceOld | undefined;
 		let sendingToken: FungibleBalance | TokenBalanceOld | undefined;
-		if (transaction.net_transfer) {
-			if ("receiving_token" in transaction.net_transfer) {
-				receivingToken = transaction.net_transfer.receiving_token;
-			} else if ("receiving_fungible" in transaction.net_transfer) {
-				receivingToken = transaction.net_transfer.receiving_fungible;
-			}
-			if ("sending_token" in transaction.net_transfer) {
-				sendingToken = transaction.net_transfer.sending_token;
-			} else if ("sending_fungible" in transaction.net_transfer) {
-				sendingToken = transaction.net_transfer.sending_fungible;
-			}
-		} else {
-			console.error(
-				"[neynar-controller] No net transfer found in transaction",
-				transaction,
-			);
-			res.status(500).json({
-				status: "failed",
-				error: "No net transfer found in transaction",
-			});
-			return;
+		if ("receiving_token" in transaction.net_transfer) {
+			receivingToken = transaction.net_transfer.receiving_token;
+		} else if ("receiving_fungible" in transaction.net_transfer) {
+			receivingToken = transaction.net_transfer.receiving_fungible;
+		}
+		if ("sending_token" in transaction.net_transfer) {
+			sendingToken = transaction.net_transfer.sending_token;
+		} else if ("sending_fungible" in transaction.net_transfer) {
+			sendingToken = transaction.net_transfer.sending_fungible;
 		}
 
 		if (!receivingToken || !sendingToken) {
