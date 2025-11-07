@@ -1,4 +1,6 @@
 import type {
+	FungibleBalance as NeynarFungibleBalance,
+	TradeWebhookPayload,
 	WebhookCastCreated,
 	WebhookFollowCreated,
 	WebhookFollowDeleted,
@@ -98,22 +100,8 @@ export const tokenBalanceSchemaOld = z.object({
 });
 export type TokenBalanceOld = z.infer<typeof tokenBalanceSchemaOld>;
 
-export const tokenBalanceSchema = z.object({
-	object: z.literal("token_balance"),
-	token: z.object({
-		object: z.literal("token"),
-		address: z.string(),
-		decimals: z.number(),
-		symbol: z.string(),
-		name: z.string(),
-		total_supply: z.string().nullable(),
-	}),
-	balance: z.object({
-		in_usd: z.number().nullable(),
-		in_token: z.string().nullable(),
-	}),
-});
-export type TokenBalance = z.infer<typeof tokenBalanceSchema>;
+export const fungibleBalanceSchema = z.custom<NeynarFungibleBalance>();
+export type FungibleBalance = z.infer<typeof fungibleBalanceSchema>;
 
 export const poolSchema = z.object({
 	object: z.literal("pool"),
@@ -137,7 +125,7 @@ export const webhookTradeCreatedSchemaOld = z.object({
 			net_transfer: z.object({
 				object: z.literal("net_transfer"),
 				receiving_token: tokenBalanceSchemaOld,
-				sending_token: tokenBalanceSchema,
+				sending_token: tokenBalanceSchemaOld,
 			}),
 		}),
 	}),
@@ -146,27 +134,7 @@ export type WebhookTradeCreatedOld = z.infer<
 	typeof webhookTradeCreatedSchemaOld
 >;
 
-export const webhookTradeCreatedSchema = z.object({
-	type: z.literal("trade.created"),
-	data: z.object({
-		object: z.literal("trade"),
-		trader: userDehydratedSchema.nullable(),
-		pool: poolSchema,
-		transaction: z.object({
-			hash: z.string(),
-			network: z.object({
-				object: z.literal("network"),
-				name: z.string(),
-			}),
-			net_transfer: z.object({
-				object: z.literal("net_transfer"),
-				receiving_fungible: tokenBalanceSchema,
-				sending_fungible: tokenBalanceSchema,
-			}),
-		}),
-	}),
-});
-
+const webhookTradeCreatedSchema = z.custom<TradeWebhookPayload>();
 export type WebhookTradeCreated = z.infer<typeof webhookTradeCreatedSchema>;
 
 /**

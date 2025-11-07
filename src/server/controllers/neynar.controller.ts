@@ -7,7 +7,10 @@ import type {
 	JobResult,
 	NeynarWebhookJobData,
 } from "../../types/index.js";
-import type { TokenBalance, TokenBalanceOld } from "../../types/neynar.type.js";
+import type {
+	FungibleBalance,
+	TokenBalanceOld,
+} from "../../types/neynar.type.js";
 import { allWebhookEventsSchema } from "../../types/neynar.type.js";
 import { getChainByName } from "../../utils/viem.util.js";
 import { neynarWebhookQueue } from "../bullmq/queues/neynar.queue.js";
@@ -53,17 +56,29 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 		// Add job to queue
 		const chain = getChainByName(transaction.network.name);
 
-		let receivingToken: TokenBalance | TokenBalanceOld | undefined;
-		let sendingToken: TokenBalance | TokenBalanceOld | undefined;
-		if ("receiving_token" in transaction.net_transfer) {
-			receivingToken = transaction.net_transfer.receiving_token;
-		} else if ("receiving_fungible" in transaction.net_transfer) {
-			receivingToken = transaction.net_transfer.receiving_fungible;
-		}
-		if ("sending_token" in transaction.net_transfer) {
-			sendingToken = transaction.net_transfer.sending_token;
-		} else if ("sending_fungible" in transaction.net_transfer) {
-			sendingToken = transaction.net_transfer.sending_fungible;
+		let receivingToken: FungibleBalance | TokenBalanceOld | undefined;
+		let sendingToken: FungibleBalance | TokenBalanceOld | undefined;
+		if (transaction.net_transfer) {
+			if ("receiving_token" in transaction.net_transfer) {
+				receivingToken = transaction.net_transfer.receiving_token;
+			} else if ("receiving_fungible" in transaction.net_transfer) {
+				receivingToken = transaction.net_transfer.receiving_fungible;
+			}
+			if ("sending_token" in transaction.net_transfer) {
+				sendingToken = transaction.net_transfer.sending_token;
+			} else if ("sending_fungible" in transaction.net_transfer) {
+				sendingToken = transaction.net_transfer.sending_fungible;
+			}
+		} else {
+			console.error(
+				"[neynar-controller] No net transfer found in transaction",
+				transaction,
+			);
+			res.status(500).json({
+				status: "failed",
+				error: "No net transfer found in transaction",
+			});
+			return;
 		}
 
 		if (!receivingToken || !sendingToken) {
@@ -106,6 +121,7 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 					sellAmountTotSupply: sendingToken.token.total_supply ?? "0",
 					buyAmountTotSupply: receivingToken.token.total_supply ?? "0",
 				},
+				rawTransaction: JSON.stringify(transaction),
 			},
 			{
 				jobId,

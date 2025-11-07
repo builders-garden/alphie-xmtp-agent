@@ -24,6 +24,7 @@ export type UpdateUsersJobData = z.infer<typeof updateUsersJobDataSchema>;
 export interface NeynarWebhookJobData {
 	user: HandleCopyTradeSchema["user"];
 	transaction: HandleCopyTradeSchema["transaction"];
+	rawTransaction: string;
 }
 
 const jobResultSuccessSchema = z.object({

@@ -32,7 +32,7 @@ import { getTokenPriceAndFdv } from "../../../utils/token.util.js";
 export const processNeynarWebhookJob = async (
 	job: Job<NeynarWebhookJobData>,
 ): Promise<JobResult> => {
-	const { user, transaction } = job.data;
+	const { user, transaction, rawTransaction } = job.data;
 	let progress = 5;
 
 	console.log(
@@ -193,6 +193,7 @@ export const processNeynarWebhookJob = async (
 			buyFdv: buyFdv.toString(),
 			sellTokenPrice: sellTokenPrice.toString(),
 			buyTokenPrice: buyTokenPrice.toString(),
+			rawTransaction: rawTransaction ?? undefined,
 		});
 
 		// save group activity in db

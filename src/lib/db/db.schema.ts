@@ -247,6 +247,7 @@ export const userActivity = sqliteTable(
 		}),
 		parentActivityTxHash: text("parent_activity_tx_hash"),
 		createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+		rawTransaction: text("raw_transaction"),
 	},
 	(t) => [
 		primaryKey({ columns: [t.chainId, t.txHash] }),
