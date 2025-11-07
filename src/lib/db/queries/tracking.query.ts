@@ -1,5 +1,5 @@
 import { and, countDistinct, eq, inArray, or } from "drizzle-orm";
-import { groupTrackedUser } from "../db.schema.js";
+import { group, groupTrackedUser } from "../db.schema.js";
 import { db } from "../index.js";
 import { getGroupByConversationId } from "./group.query.js";
 import { getUserByFarcasterFid, getUserByInboxId } from "./user.query.js";
@@ -107,19 +107,23 @@ export const getGroupsTrackingUserByUserId = async (
 	if (!userId) {
 		return [];
 	}
-	const whereClause = groupId
-		? or(
-				eq(groupTrackedUser.groupId, groupId),
-				eq(groupTrackedUser.userId, userId),
-			)
-		: eq(groupTrackedUser.userId, userId);
-	const data = await db.query.groupTrackedUser.findMany({
-		where: whereClause,
+	if (!groupId) {
+		return await db.query.groupTrackedUser.findMany({
+			where: eq(groupTrackedUser.userId, userId),
+			with: {
+				group: true,
+			},
+		});
+	}
+	return await db.query.groupTrackedUser.findMany({
+		where: and(
+			eq(groupTrackedUser.userId, userId),
+			eq(groupTrackedUser.groupId, groupId),
+		),
 		with: {
 			group: true,
 		},
 	});
-	return data;
 };
 
 /**
