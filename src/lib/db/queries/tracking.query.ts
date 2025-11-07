@@ -115,15 +115,24 @@ export const getGroupsTrackingUserByUserId = async (
 			},
 		});
 	}
-	return await db.query.groupTrackedUser.findMany({
-		where: and(
-			eq(groupTrackedUser.userId, userId),
-			eq(groupTrackedUser.groupId, groupId),
-		),
-		with: {
-			group: true,
-		},
-	});
+	const data = await db
+		.selectDistinct({
+			groupId: groupTrackedUser.groupId,
+			userId: groupTrackedUser.userId,
+			addedByUserId: groupTrackedUser.addedByUserId,
+			createdAt: groupTrackedUser.createdAt,
+			group,
+		})
+		.from(groupTrackedUser)
+		.where(
+			or(
+				eq(groupTrackedUser.userId, userId),
+				eq(groupTrackedUser.groupId, groupId),
+			),
+		)
+		.innerJoin(group, eq(groupTrackedUser.groupId, group.id))
+		.groupBy(groupTrackedUser.groupId);
+	return data;
 };
 
 /**
