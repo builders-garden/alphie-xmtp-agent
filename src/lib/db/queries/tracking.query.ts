@@ -107,11 +107,18 @@ export const getGroupsTrackingUserByUserId = async (
 	if (!userId) {
 		return [];
 	}
-	const whereClause = groupId
-		? eq(groupTrackedUser.groupId, groupId)
-		: eq(groupTrackedUser.userId, userId);
+	if (groupId) {
+		const group = await db.query.groupTrackedUser.findFirst({
+			where: eq(groupTrackedUser.groupId, groupId),
+			with: {
+				group: true,
+			},
+		});
+		return group ? [group] : [];
+	}
+	// normal query
 	return await db.query.groupTrackedUser.findMany({
-		where: whereClause,
+		where: eq(groupTrackedUser.userId, userId),
 		with: {
 			group: true,
 		},
