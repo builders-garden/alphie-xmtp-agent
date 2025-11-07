@@ -107,32 +107,15 @@ export const getGroupsTrackingUserByUserId = async (
 	if (!userId) {
 		return [];
 	}
-	if (!groupId) {
-		return await db.query.groupTrackedUser.findMany({
-			where: eq(groupTrackedUser.userId, userId),
-			with: {
-				group: true,
-			},
-		});
-	}
-	const data = await db
-		.selectDistinct({
-			groupId: groupTrackedUser.groupId,
-			userId: groupTrackedUser.userId,
-			addedByUserId: groupTrackedUser.addedByUserId,
-			createdAt: groupTrackedUser.createdAt,
-			group,
-		})
-		.from(groupTrackedUser)
-		.where(
-			or(
-				eq(groupTrackedUser.userId, userId),
-				eq(groupTrackedUser.groupId, groupId),
-			),
-		)
-		.innerJoin(group, eq(groupTrackedUser.groupId, group.id))
-		.groupBy(groupTrackedUser.groupId);
-	return data;
+	const whereClause = groupId
+		? eq(groupTrackedUser.groupId, groupId)
+		: eq(groupTrackedUser.userId, userId);
+	return await db.query.groupTrackedUser.findMany({
+		where: whereClause,
+		with: {
+			group: true,
+		},
+	});
 };
 
 /**
