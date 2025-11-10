@@ -1,4 +1,4 @@
-import type { Group } from "@xmtp/agent-sdk";
+import type { Dm, Group } from "@xmtp/agent-sdk";
 import { logDetails } from "@xmtp/agent-sdk/debug";
 import cookieParserMiddleware from "cookie-parser";
 import cors from "cors";
@@ -8,14 +8,20 @@ import helmet from "helmet";
 import morganLogger from "morgan";
 import { base } from "viem/chains";
 import { DEFAULT_ACTIONS_MESSAGE_2, WELCOME_MESSAGE } from "./lib/constants.js";
-import { getOrCreateGroupByConversationId } from "./lib/db/queries/index.js";
+import {
+	getOrCreateGroupByConversationId,
+	getOrGroupByDmConversationId,
+} from "./lib/db/queries/index.js";
 import { env } from "./lib/env.js";
 import { redisConnection } from "./lib/redis.js";
-import { createXmtpAgent, handleXmtpMessage } from "./lib/xmtp/agent.js";
+import {
+	createXmtpAgent,
+	handleXmtpTextMessage,
+	handleXmtpTxReferenceEvent,
+} from "./lib/xmtp/agent.js";
 import {
 	eyesReactionMiddleware,
 	inlineActionsMiddleware,
-	transactionReferenceMiddleware,
 } from "./lib/xmtp/middlewares.js";
 import { getBullboardRouter } from "./server/bullmq/dashboard.js";
 import {
@@ -111,20 +117,42 @@ async function main() {
 	registerXmtpActions();
 
 	// XMTP Agent middlewares
-	xmtpAgent.use(
-		transactionReferenceMiddleware,
-		inlineActionsMiddleware,
-		eyesReactionMiddleware,
-	);
+	xmtpAgent.use(inlineActionsMiddleware, eyesReactionMiddleware);
 
-	xmtpAgent.on("message", async (ctx) => {
-		console.log(`Message received: ${JSON.stringify(ctx.message.content)}`);
-		await handleXmtpMessage(ctx, agentAddress);
+	xmtpAgent.on("transaction-reference", async (ctx) => {
+		console.log(
+			"[xmtp] Transaction reference received event",
+			ctx.message.content,
+		);
+		await handleXmtpTxReferenceEvent(ctx, agentAddress);
+	});
+
+	xmtpAgent.on("text", async (ctx) => {
+		console.log("[xmtp] New text received event", ctx.message.content);
+		await handleXmtpTextMessage(ctx, agentAddress);
+	});
+
+	xmtpAgent.on("dm", async (ctx) => {
+		const conversationId = ctx.conversation.id;
+		console.log("[xmtp] DM received event", conversationId);
+		const { group, isNew } = await getOrGroupByDmConversationId(
+			conversationId,
+			ctx.conversation as Dm,
+			agentAddress,
+			ctx.client.inboxId,
+		);
+		if (isNew) {
+			// If is new group, send welcome message and actions
+			console.log("[xmtp] Sending welcome message to new group", group.id);
+			await ctx.conversation.send(WELCOME_MESSAGE);
+			const actions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE_2 });
+			await ctx.conversation.send(actions, ContentTypeActions);
+		}
 	});
 
 	xmtpAgent.on("group", async (ctx) => {
-		console.log("Group received event", JSON.stringify(ctx.conversation));
 		const conversationId = ctx.conversation.id;
+		console.log("[xmtp] Group received event", conversationId);
 		const { group, isNew } = await getOrCreateGroupByConversationId(
 			conversationId,
 			ctx.conversation as Group,
@@ -133,7 +161,7 @@ async function main() {
 		);
 		if (isNew) {
 			// If is new group, send welcome message and actions
-			console.log("Sending welcome message to new group", group.id);
+			console.log("[xmtp] Sending welcome message to new group", group.id);
 			await ctx.conversation.send(WELCOME_MESSAGE);
 			const actions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE_2 });
 			await ctx.conversation.send(actions, ContentTypeActions);
@@ -141,11 +169,11 @@ async function main() {
 	});
 
 	xmtpAgent.on("unknownMessage", async (ctx) => {
-		console.log(`Unknown message received: ${JSON.stringify(ctx)}`);
+		console.log(`[xmtp] Unknown message received: ${JSON.stringify(ctx)}`);
 	});
 
 	xmtpAgent.on("unhandledError", async (ctx) => {
-		console.log(`Unhandled error received: ${JSON.stringify(ctx)}`);
+		console.log(`[xmtp] Unhandled error received: ${JSON.stringify(ctx)}`);
 	});
 
 	// Handle startup

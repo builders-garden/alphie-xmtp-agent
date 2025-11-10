@@ -1,28 +1,21 @@
-import { Agent, filter, type MessageContext } from "@xmtp/agent-sdk";
-import type { GroupUpdated } from "@xmtp/content-type-group-updated";
+import { Agent, filter } from "@xmtp/agent-sdk";
 import { GroupUpdatedCodec } from "@xmtp/content-type-group-updated";
 import { MarkdownCodec } from "@xmtp/content-type-markdown";
-import type { Reaction } from "@xmtp/content-type-reaction";
 import { ReactionCodec } from "@xmtp/content-type-reaction";
-import {
-	type ReadReceipt,
-	ReadReceiptCodec,
-} from "@xmtp/content-type-read-receipt";
-import type { RemoteAttachment } from "@xmtp/content-type-remote-attachment";
+import { ReadReceiptCodec } from "@xmtp/content-type-read-receipt";
 import { RemoteAttachmentCodec } from "@xmtp/content-type-remote-attachment";
-import type { Reply } from "@xmtp/content-type-reply";
 import { ReplyCodec } from "@xmtp/content-type-reply";
 import {
 	type TransactionReference,
 	TransactionReferenceCodec,
 } from "@xmtp/content-type-transaction-reference";
-import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
 import { WalletSendCallsCodec } from "@xmtp/content-type-wallet-send-calls";
+import { fromHex, isHex } from "viem";
+import { base, mainnet } from "viem/chains";
 import type {
-	ActionsContent,
 	GroupUpdatedMessage,
-	IntentContent,
 	ThinkingReactionContext,
+	XMTPMessageContext,
 } from "../../types/index.js";
 import {
 	getEncryptionKeyFromString,
@@ -74,42 +67,31 @@ export const createXmtpAgent = async () => {
 };
 
 /**
- * Handle XMTP message
+ * Handle XMTP text message
  * @param ctx - The message context
+ * @param agentAddress - The agent address
+ * @returns
  */
-export const handleXmtpMessage = async (
-	ctx: MessageContext<
-		| string
-		| IntentContent
-		| Reply
-		| WalletSendCallsParams
-		| ActionsContent
-		| GroupUpdated
-		| ReadReceipt
-		| Reaction
-		| RemoteAttachment
-		| TransactionReference
-	>,
+export const handleXmtpTextMessage = async (
+	ctx: XMTPMessageContext,
 	agentAddress: string,
 ) => {
 	try {
-		const thinkingContext = ctx as ThinkingReactionContext;
-
 		// skip if message has no content or is from the agent or its a reaction
 		if (
 			!filter.hasContent(ctx.message) ||
 			filter.fromSelf(ctx.message, ctx.client) ||
-			ctx.message.contentType?.typeId === "reaction"
+			ctx.message.contentType?.typeId === "reaction" ||
+			ctx.usesCodec(TransactionReferenceCodec)
 		) {
 			return;
 		}
 
+		const thinkingContext = ctx as ThinkingReactionContext;
+
 		// Auto-respond to DM messages
 		if (ctx.isDm()) {
 			console.log("✓ Handling DM message");
-			if (ctx.usesCodec(TransactionReferenceCodec)) {
-				return; // already handled by the transaction reference middleware
-			}
 			await thinkingContext.helpers.addThinkingEmoji();
 			await ctx.sendText(DM_RESPONSE_MESSAGE);
 			return;
@@ -117,9 +99,6 @@ export const handleXmtpMessage = async (
 
 		// Handle group messages
 		if (ctx.isGroup()) {
-			if (ctx.usesCodec(TransactionReferenceCodec)) {
-				return; // already handled by the transaction reference middleware
-			}
 			const conversationId = ctx.conversation.id;
 			console.log(`[xmtp] Handling group message ${conversationId}`);
 			const { group, isNew } = await getOrCreateGroupByConversationId(
@@ -192,5 +171,65 @@ export const handleXmtpMessage = async (
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		console.error("❌ Error processing message:", errorMessage);
+	}
+};
+
+/**
+ * Handle XMTP transaction reference event
+ * @param ctx - The message context
+ * @param _agentAddress - The agent address
+ * @returns
+ */
+export const handleXmtpTxReferenceEvent = async (
+	ctx: XMTPMessageContext,
+	_agentAddress: string,
+) => {
+	// Check if this is a transaction reference message
+	if (ctx.usesCodec(TransactionReferenceCodec)) {
+		const senderAddress = await ctx.getSenderAddress();
+
+		// expected from xmtp.chat
+		let txRef: TransactionReference = ctx.message.content;
+		if (!txRef.reference) {
+			// transactionReference is nested in the message content by the base app
+			if (
+				typeof ctx.message.content === "object" &&
+				"transactionReference" in ctx.message.content
+			) {
+				txRef = (
+					ctx.message.content as unknown as {
+						transactionReference: TransactionReference;
+					}
+				).transactionReference;
+			}
+		}
+		if (!txRef.reference) {
+			console.error(
+				"❌ Transaction reference message received but no reference found",
+				ctx.message,
+			);
+			return;
+		}
+
+		console.log(
+			`[tx-reference-middleware] tx reference message received from ${senderAddress} ${txRef.reference} network ${txRef.networkId}`,
+		);
+		const networkId = isHex(txRef.networkId)
+			? fromHex(txRef.networkId, "number")
+			: txRef.networkId;
+		const txHash = txRef.reference;
+		const explorerUrl =
+			networkId === base.id
+				? `https://basescan.org/tx/${txHash}`
+				: networkId === mainnet.id
+					? `https://etherscan.io/tx/${txHash}`
+					: undefined;
+
+		await ctx.sendMarkdown(
+			`✅ Transaction received! on Network: ${networkId} tx hash: ${txHash} ${explorerUrl ? `[View on explorer](${explorerUrl})` : ""}`,
+		);
+
+		// Don't continue to other handlers since we handled this message
+		return;
 	}
 };

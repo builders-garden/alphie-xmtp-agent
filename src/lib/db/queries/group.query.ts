@@ -1,6 +1,7 @@
 import {
 	type GroupMember,
 	IdentifierKind,
+	type Dm as XmtpDm,
 	type Group as XmtpGroup,
 } from "@xmtp/agent-sdk";
 import { and, eq, inArray, or } from "drizzle-orm";
@@ -216,6 +217,31 @@ export const getOrCreateGroupByConversationId = async (
 			imageUrl: xmtpGroup.imageUrl,
 		});
 		const members = await xmtpGroup.members();
+		await upsertGroupMembers(newGroup.id, members, agentAddress, agentInboxId);
+		return { group: newGroup, isNew: true };
+	}
+	return { group, isNew: false };
+};
+
+/**
+ * Get or create group by conversation id
+ * @param conversationId - The group conversation id
+ * @param xmtpDm - The XMTP dm
+ * @returns The group and whether it is new
+ */
+export const getOrGroupByDmConversationId = async (
+	conversationId: string,
+	xmtpDm: XmtpDm,
+	agentAddress: string,
+	agentInboxId: string,
+): Promise<{ group: Group; isNew: boolean }> => {
+	const group = await getGroupByConversationId(conversationId);
+	if (!group) {
+		const newGroup = await createGroup({
+			id: ulid(),
+			conversationId,
+		});
+		const members = await xmtpDm.members();
 		await upsertGroupMembers(newGroup.id, members, agentAddress, agentInboxId);
 		return { group: newGroup, isNew: true };
 	}

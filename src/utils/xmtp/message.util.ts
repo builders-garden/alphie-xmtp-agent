@@ -4,13 +4,7 @@ import {
 	type GroupMember,
 	IdentifierKind,
 } from "@xmtp/agent-sdk";
-import type { GroupUpdated } from "@xmtp/content-type-group-updated";
-import type { Reaction } from "@xmtp/content-type-reaction";
-import type { ReadReceipt } from "@xmtp/content-type-read-receipt";
-import type { RemoteAttachment } from "@xmtp/content-type-remote-attachment";
 import type { Reply } from "@xmtp/content-type-reply";
-import type { TransactionReference } from "@xmtp/content-type-transaction-reference";
-import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
 import { AGENT_TRIGGERS } from "../../lib/constants.js";
 import type { Group } from "../../lib/db/db.schema.js";
 import {
@@ -21,9 +15,8 @@ import {
 } from "../../lib/db/queries/index.js";
 import { XMTP_AGENTS } from "../../lib/xmtp-agents.js";
 import type {
-	ActionsContent,
 	GroupUpdatedMessage,
-	IntentContent,
+	XMTPContentTypes,
 } from "../../types/index.js";
 
 /**
@@ -37,18 +30,7 @@ import type {
 export async function isReplyToAgent(
 	message: DecodedMessage,
 	agentInboxId: string,
-	client: Client<
-		| string
-		| IntentContent
-		| Reply
-		| WalletSendCallsParams
-		| ActionsContent
-		| GroupUpdated
-		| ReadReceipt
-		| Reaction
-		| RemoteAttachment
-		| TransactionReference
-	>,
+	client: Client<XMTPContentTypes>,
 ): Promise<boolean> {
 	// Check if the message is a reply type
 	if (message.contentType && message.contentType.typeId === "reply") {
@@ -210,18 +192,7 @@ export async function shouldRespondToMessage({
 	message: DecodedMessage;
 	agentInboxId: string;
 	agentAddress: string;
-	client: Client<
-		| string
-		| IntentContent
-		| Reply
-		| WalletSendCallsParams
-		| ActionsContent
-		| GroupUpdated
-		| ReadReceipt
-		| Reaction
-		| RemoteAttachment
-		| TransactionReference
-	>;
+	client: Client<XMTPContentTypes>;
 }): Promise<boolean> {
 	const messageContent = extractMessageContent(message);
 
