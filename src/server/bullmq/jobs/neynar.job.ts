@@ -162,7 +162,7 @@ export const processNeynarWebhookJob = async (
 				error: "Unable to get token info",
 			};
 		}
-		const sellAmount = Number.parseFloat(transaction.sellAmount).toFixed(2);
+		const sellAmount = Number.parseFloat(transaction.sellAmount).toFixed(4);
 
 		const actionMessage = `Copy trade @${userInDb.name}: Swap ${sellAmount} ${sellToken.symbol} for ${buyToken.symbol}`;
 
@@ -171,11 +171,13 @@ export const processNeynarWebhookJob = async (
 			amount: transaction.sellAmount,
 			amountInUsd: transaction.sellAmountUsd,
 			totalSupply: transaction.sellAmountTotSupply,
+			digits: sellToken.decimals,
 		});
 		const { price: buyTokenPrice, fdv: buyFdv } = getTokenPriceAndFdv({
 			amount: transaction.buyAmount,
 			amountInUsd: transaction.buyAmountUsd,
 			totalSupply: transaction.buyAmountTotSupply,
+			digits: buyToken.decimals,
 		});
 		await saveUserActivityInDb({
 			userId: userInDb.id,
@@ -183,7 +185,7 @@ export const processNeynarWebhookJob = async (
 			txHash: transaction.transactionHash,
 			sellTokenId: sellToken.id,
 			buyTokenId: buyToken.id,
-			sellAmount: sellAmount,
+			sellAmount: transaction.sellAmount,
 			sellAmountUsd: transaction.sellAmountUsd,
 			buyAmount: transaction.buyAmount,
 			buyAmountUsd: transaction.buyAmountUsd,

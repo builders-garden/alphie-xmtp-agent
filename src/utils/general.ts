@@ -1,11 +1,4 @@
-import {
-	type DecodedMessage,
-	type GroupMember,
-	IdentifierKind,
-} from "@xmtp/agent-sdk";
-import { convertToModelMessages, type ModelMessage, type UIMessage } from "ai";
 import { fromString } from "uint8arrays";
-import { ulid } from "ulid";
 /**
  * Get encryption key from string
  * @param encryptionKey - The encryption key string
@@ -36,53 +29,4 @@ export const formatAvatarSrc = (src: string) => {
 		}
 	}
 	return avatarSrc;
-};
-
-/**
- * Convert XMTP messages to AI model messages
- * @param messages - The XMTP messages to convert
- * @param agentInboxId - The inbox ID of the agent
- * @returns The AI model messages for the given XMTP messages
- */
-export const convertXmtpToAiModelMessages = ({
-	messages,
-	agentInboxId,
-	agentAddress,
-	xmtpMembers,
-}: {
-	messages: DecodedMessage[];
-	agentInboxId: string;
-	agentAddress: string;
-	xmtpMembers: GroupMember[];
-}): ModelMessage[] => {
-	const inboxIdMap = new Map(
-		xmtpMembers.map((member) => [member.inboxId, member.accountIdentifiers]),
-	);
-
-	const uiMessages: UIMessage[] = messages.map((msg) => {
-		const userAddress = inboxIdMap
-			.get(msg.senderInboxId)
-			?.find((id) => id.identifierKind === IdentifierKind.Ethereum)?.identifier;
-		const isAgent =
-			msg.senderInboxId.toLowerCase() === agentInboxId.toLowerCase() ||
-			userAddress === agentAddress;
-
-		return {
-			id: msg.id || ulid(),
-			role: isAgent ? "assistant" : "user",
-			parts: [
-				{
-					type: "text",
-					text: isAgent
-						? JSON.stringify(`Alphie (me): ${msg.content}`)
-						: JSON.stringify(
-								`User ${userAddress || msg.senderInboxId}: ${msg.content}`,
-							),
-					state: "done" as const,
-				},
-			],
-		};
-	});
-	const modelMessages = convertToModelMessages(uiMessages);
-	return modelMessages;
 };

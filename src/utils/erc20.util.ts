@@ -3,37 +3,12 @@ import {
 	createPublicClient,
 	erc20Abi,
 	formatUnits,
+	type Hex,
 	http,
 	zeroAddress,
 } from "viem";
-import { arbitrum, base, mainnet, optimism, polygon } from "viem/chains";
-
-const basePublicClient = createPublicClient({
-	chain: base,
-	transport: http(),
-});
-
-/**
- * Get the chain for a given chain id
- * @param chainId
- * @returns The chain for the given chain id
- */
-function getChain(chainId: number) {
-	switch (chainId) {
-		case mainnet.id:
-			return mainnet;
-		case base.id:
-			return base;
-		case arbitrum.id:
-			return arbitrum;
-		case optimism.id:
-			return optimism;
-		case polygon.id:
-			return polygon;
-		default:
-			throw new Error(`Unsupported chain id: ${chainId}`);
-	}
-}
+import { base } from "viem/chains";
+import { basePublicClient, getChain } from "./viem.util.js";
 
 /**
  * Get info about the tokens and the user balance on a given chain in eth and in the token
@@ -364,4 +339,54 @@ export const getTransactionData = async ({
 		ethBalance,
 		gasEstimate,
 	};
+};
+
+/**
+ * Get the block timestamp for a given transaction hash and chain id
+ * @param txHash
+ * @param chainId
+ * @returns
+ */
+export const getTransactionTimestamp = async ({
+	txHash,
+	chainId,
+}: {
+	txHash: Hex;
+	chainId: number;
+}) => {
+	if (chainId === base.id) {
+		const receipt = await basePublicClient.getTransactionReceipt({
+			hash: txHash,
+		});
+		if (!receipt) {
+			return null;
+		}
+		const blockHash = receipt.blockHash;
+		const block = await basePublicClient.getBlock({
+			blockHash,
+		});
+		if (!block) {
+			return null;
+		}
+		return block.timestamp;
+	}
+	// chain is not base, create a public client for the given chain
+	const publicClient = createPublicClient({
+		chain: getChain(chainId),
+		transport: http(),
+	});
+	const receipt = await publicClient.getTransactionReceipt({
+		hash: txHash,
+	});
+	if (!receipt) {
+		return null;
+	}
+	const blockHash = receipt.blockHash;
+	const block = await publicClient.getBlock({
+		blockHash,
+	});
+	if (!block) {
+		return null;
+	}
+	return block.timestamp;
 };
