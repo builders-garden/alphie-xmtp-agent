@@ -81,7 +81,7 @@ export const handleXmtpTextMessage = async (
 		if (
 			!filter.hasContent(ctx.message) ||
 			filter.fromSelf(ctx.message, ctx.client) ||
-			ctx.message.contentType?.typeId === "reaction" ||
+			ctx.usesCodec(ReactionCodec) ||
 			ctx.usesCodec(TransactionReferenceCodec)
 		) {
 			return;
