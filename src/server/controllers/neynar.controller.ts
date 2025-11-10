@@ -1,7 +1,7 @@
 import type { Job } from "bullmq";
 import type { Request, Response } from "express";
 import { ulid } from "ulid";
-import type { Address, Hex } from "viem";
+import { getAddress, type Hex } from "viem";
 import type {
 	JobProgress,
 	JobResult,
@@ -103,8 +103,8 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 				transaction: {
 					chainId: chain.id,
 					transactionHash: transaction.hash as Hex,
-					buyToken: receivingToken.token.address as Address,
-					sellToken: sendingToken.token.address as Address,
+					buyToken: getAddress(receivingToken.token.address),
+					sellToken: getAddress(sendingToken.token.address),
 					sellAmount: sendingToken.balance.in_token ?? "0",
 					sellAmountUsd: sellAmountUsdVal?.toString() ?? "0",
 					buyAmount: receivingToken.balance.in_token ?? "0",
@@ -223,8 +223,8 @@ export const handleTestWebhookGroupEvent = async (
 				transaction: {
 					chainId: chain.id,
 					transactionHash: transaction.hash as Hex,
-					buyToken: receivingToken.token.address as Address,
-					sellToken: sendingToken.token.address as Address,
+					buyToken: getAddress(receivingToken.token.address),
+					sellToken: getAddress(sendingToken.token.address),
 					sellAmount: sendingToken.balance.in_token ?? "0",
 					sellAmountUsd: sellAmountUsdVal?.toString() ?? "0",
 					buyAmount: receivingToken.balance.in_token ?? "0",
