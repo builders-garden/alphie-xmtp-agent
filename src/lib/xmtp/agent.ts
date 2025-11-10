@@ -107,6 +107,9 @@ export const handleXmtpMessage = async (
 		// Auto-respond to DM messages
 		if (ctx.isDm()) {
 			console.log("✓ Handling DM message");
+			if (ctx.usesCodec(TransactionReferenceCodec)) {
+				return; // already handled by the transaction reference middleware
+			}
 			await thinkingContext.helpers.addThinkingEmoji();
 			await ctx.sendText(DM_RESPONSE_MESSAGE);
 			return;
@@ -114,6 +117,9 @@ export const handleXmtpMessage = async (
 
 		// Handle group messages
 		if (ctx.isGroup()) {
+			if (ctx.usesCodec(TransactionReferenceCodec)) {
+				return; // already handled by the transaction reference middleware
+			}
 			const conversationId = ctx.conversation.id;
 			console.log(`[xmtp] Handling group message ${conversationId}`);
 			const { group, isNew } = await getOrCreateGroupByConversationId(
@@ -124,8 +130,8 @@ export const handleXmtpMessage = async (
 			);
 			console.log(`[xmtp] Group ${group.id} isNew: ${isNew}`);
 
-			// Handle group updates
 			if (ctx.message.contentType?.typeId === "group_updated") {
+				// Handle group updates
 				console.log(
 					`[xmtp] Group updated message received: ${JSON.stringify(ctx.message)}`,
 				);
