@@ -15,6 +15,7 @@ import { createXmtpAgent, handleXmtpMessage } from "./lib/xmtp/agent.js";
 import {
 	eyesReactionMiddleware,
 	inlineActionsMiddleware,
+	transactionReferenceMiddleware,
 } from "./lib/xmtp/middlewares.js";
 import { getBullboardRouter } from "./server/bullmq/dashboard.js";
 import {
@@ -110,7 +111,11 @@ async function main() {
 	registerXmtpActions();
 
 	// XMTP Agent middlewares
-	xmtpAgent.use(inlineActionsMiddleware, eyesReactionMiddleware);
+	xmtpAgent.use(
+		transactionReferenceMiddleware,
+		inlineActionsMiddleware,
+		eyesReactionMiddleware,
+	);
 
 	xmtpAgent.on("message", async (ctx) => {
 		console.log(`Message received: ${JSON.stringify(ctx.message.content)}`);

@@ -4,10 +4,18 @@ import { GroupUpdatedCodec } from "@xmtp/content-type-group-updated";
 import { MarkdownCodec } from "@xmtp/content-type-markdown";
 import type { Reaction } from "@xmtp/content-type-reaction";
 import { ReactionCodec } from "@xmtp/content-type-reaction";
+import {
+	type ReadReceipt,
+	ReadReceiptCodec,
+} from "@xmtp/content-type-read-receipt";
 import type { RemoteAttachment } from "@xmtp/content-type-remote-attachment";
 import { RemoteAttachmentCodec } from "@xmtp/content-type-remote-attachment";
 import type { Reply } from "@xmtp/content-type-reply";
 import { ReplyCodec } from "@xmtp/content-type-reply";
+import {
+	type TransactionReference,
+	TransactionReferenceCodec,
+} from "@xmtp/content-type-transaction-reference";
 import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
 import { WalletSendCallsCodec } from "@xmtp/content-type-wallet-send-calls";
 import type {
@@ -57,8 +65,10 @@ export const createXmtpAgent = async () => {
 			new ActionsCodec(),
 			new IntentCodec(),
 			new ReactionCodec(),
+			new ReadReceiptCodec(),
 			new RemoteAttachmentCodec(),
 			new MarkdownCodec(),
+			new TransactionReferenceCodec(),
 		],
 	});
 };
@@ -75,8 +85,10 @@ export const handleXmtpMessage = async (
 		| WalletSendCallsParams
 		| ActionsContent
 		| GroupUpdated
+		| ReadReceipt
 		| Reaction
 		| RemoteAttachment
+		| TransactionReference
 	>,
 	agentAddress: string,
 ) => {
@@ -89,7 +101,6 @@ export const handleXmtpMessage = async (
 			filter.fromSelf(ctx.message, ctx.client) ||
 			ctx.message.contentType?.typeId === "reaction"
 		) {
-			console.log("Skipping message");
 			return;
 		}
 

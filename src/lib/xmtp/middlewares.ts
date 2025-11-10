@@ -3,6 +3,12 @@ import {
 	ContentTypeReaction,
 	type Reaction,
 } from "@xmtp/content-type-reaction";
+import {
+	type TransactionReference,
+	TransactionReferenceCodec,
+} from "@xmtp/content-type-transaction-reference";
+import { fromHex, isHex } from "viem";
+import { base, mainnet } from "viem/chains";
 import type {
 	InlineActionsContext,
 	IntentContent,
@@ -85,4 +91,62 @@ export const eyesReactionMiddleware: AgentMiddleware = async (ctx, next) => {
 		// Continue anyway
 		await next();
 	}
+};
+
+/** Transaction Reference */
+export const transactionReferenceMiddleware: AgentMiddleware = async (
+	ctx,
+	next,
+) => {
+	// Check if this is a transaction reference message
+	if (ctx.usesCodec(TransactionReferenceCodec)) {
+		const senderAddress = await ctx.getSenderAddress();
+
+		// expected from xmtp.chat
+		let txRef: TransactionReference = ctx.message.content;
+		if (!txRef.reference) {
+			// transactionReference is nested in the message content by the base app
+			if (
+				typeof ctx.message.content === "object" &&
+				"transactionReference" in ctx.message.content
+			) {
+				txRef = (
+					ctx.message.content as unknown as {
+						transactionReference: TransactionReference;
+					}
+				).transactionReference;
+			}
+		}
+		if (!txRef.reference) {
+			console.error(
+				"❌ Transaction reference message received but no reference found",
+				ctx.message,
+			);
+			await next();
+		}
+
+		console.log(
+			`[tx-reference-middleware] tx reference message received from ${senderAddress} ${txRef.reference} network ${txRef.networkId}`,
+		);
+		const networkId = isHex(txRef.networkId)
+			? fromHex(txRef.networkId, "number")
+			: txRef.networkId;
+		const txHash = txRef.reference;
+		const explorerUrl =
+			networkId === base.id
+				? `https://basescan.org/tx/${txHash}`
+				: networkId === mainnet.id
+					? `https://etherscan.io/tx/${txHash}`
+					: undefined;
+
+		await ctx.sendMarkdown(
+			`✅ Transaction received! on Network: ${networkId} tx hash: ${txHash} ${explorerUrl ? `[View on explorer](${explorerUrl})` : ""}`,
+		);
+
+		// Don't continue to other handlers since we handled this message
+		return;
+	}
+
+	// Continue to next middleware/handler
+	await next();
 };
