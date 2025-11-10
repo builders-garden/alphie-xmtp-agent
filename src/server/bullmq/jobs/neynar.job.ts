@@ -128,9 +128,12 @@ export const processNeynarWebhookJob = async (
 					id: `eip155:${transaction.chainId}:${transaction.sellToken}`,
 					address: transaction.sellToken,
 					chainId: transaction.chainId,
-					symbol: onchainTokenInfo.sellSymbol,
-					name: onchainTokenInfo.sellSymbol ?? "Unknown",
-					decimals: onchainTokenInfo.tokenDecimals ?? 18,
+					symbol: sellTokenCodexInfo?.symbol ?? onchainTokenInfo.sellSymbol,
+					name:
+						sellTokenCodexInfo?.name ??
+						onchainTokenInfo.sellSymbol ??
+						"Unknown",
+					decimals: sellTokenCodexInfo?.decimals,
 					imageUrl: sellTokenCodexInfo?.info?.imageLargeUrl
 						? sellTokenCodexInfo.info.imageLargeUrl
 						: undefined,
@@ -142,9 +145,11 @@ export const processNeynarWebhookJob = async (
 					id: `eip155:${transaction.chainId}:${transaction.buyToken}`,
 					address: transaction.buyToken,
 					chainId: transaction.chainId,
-					symbol: onchainTokenInfo.buySymbol,
-					name: onchainTokenInfo.buySymbol ?? "Unknown",
-					decimals: onchainTokenInfo.tokenDecimals ?? 18,
+					symbol: buyTokenCodexInfo?.symbol ?? onchainTokenInfo.buySymbol,
+					name:
+						buyTokenCodexInfo?.name ?? onchainTokenInfo.buySymbol ?? "Unknown",
+					decimals:
+						buyTokenCodexInfo?.decimals ?? onchainTokenInfo.tokenDecimals ?? 18,
 					imageUrl: buyTokenCodexInfo?.info?.imageLargeUrl
 						? buyTokenCodexInfo.info.imageLargeUrl
 						: undefined,
