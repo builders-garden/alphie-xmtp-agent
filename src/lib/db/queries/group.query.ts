@@ -141,17 +141,20 @@ export const addGroupMembersByInboxIds = async (
 			getOrCreateUserByInboxId(member.inboxId, member.address),
 		),
 	);
-	const rows: CreateGroupMember[] = users.map((u) => ({
-		id: ulid(),
-		groupId,
-		userId: u?.id ?? "",
-	}));
+	const rows: CreateGroupMember[] = users
+		.filter((u) => u !== null)
+		.map((u) => ({
+			id: ulid(),
+			groupId,
+			userId: u?.id ?? "",
+		}));
 	// Insert, ignoring duplicates
 	await db.insert(groupMember).values(rows).onConflictDoNothing();
 
 	// add users to neynar webhook
 	if (users.length > 0) {
 		const usersToAdd = users
+			.filter((u) => u !== null)
 			.map((u) => ({
 				fid: u?.farcaster?.fid ?? -1,
 				userId: u?.id ?? "",

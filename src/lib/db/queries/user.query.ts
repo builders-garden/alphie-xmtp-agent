@@ -57,6 +57,7 @@ export const createUser = async (input: CreateUser) => {
  * @param address - The address of the user
  * @param neynarUser - The user
  * @returns
+ * @throws Error if unable to resolve Farcaster FID for user creation. Address or Neynar user with fid is required.
  */
 const createUserFromAddress = async (
 	inboxId?: string,
@@ -179,11 +180,17 @@ export const getOrCreateUserByInboxId = async (
 	inboxId: string,
 	address?: string,
 ): Promise<(User & { farcaster?: Farcaster }) | null> => {
-	const existing = await getUserByInboxId(inboxId);
-	if (existing) {
-		return existing;
+	try {
+		const existing = await getUserByInboxId(inboxId);
+		if (existing) {
+			return existing;
+		}
+		const newUser = await createUserFromAddress(inboxId, address);
+		return newUser;
+	} catch (err) {
+		console.error("an error occured creating the user", err);
+		return null;
 	}
-	return await createUserFromAddress(inboxId, address);
 };
 
 /**
@@ -193,16 +200,21 @@ export const getOrCreateUserByInboxId = async (
  */
 export const getOrCreateUserByFarcasterFid = async (
 	neynarUser: NeynarUser,
-): Promise<User> => {
-	const existing = await getUserByFarcasterFid(neynarUser.fid);
-	if (existing) return existing;
+): Promise<(User & { farcaster?: Farcaster }) | null> => {
+	try {
+		const existing = await getUserByFarcasterFid(neynarUser.fid);
+		if (existing) return existing;
 
-	const address =
-		neynarUser.verified_addresses.primary.eth_address ?? undefined;
-	if (!address) {
-		throw new Error("Cannot create user without a custody address");
+		const address =
+			neynarUser.verified_addresses.primary.eth_address ?? undefined;
+		if (!address) {
+			throw new Error("Cannot create user without a custody address");
+		}
+		return await createUserFromAddress(undefined, address, neynarUser);
+	} catch (err) {
+		console.error("an error occured creating the user", err);
+		return null;
 	}
-	return createUserFromAddress(undefined, address, neynarUser);
 };
 
 /**
@@ -236,9 +248,14 @@ export const getOrCreateUsersByInboxIds = async (
 	);
 	const toCreate = data.filter((d) => !existingInboxIds.has(d.inboxId));
 	const created = await Promise.all(
-		toCreate.map(
-			async (d) => await createUserFromAddress(d.inboxId, d.address),
-		),
+		toCreate.map(async (d) => {
+			try {
+				return await createUserFromAddress(d.inboxId, d.address);
+			} catch (err) {
+				console.error("an error occured creating the user", err);
+				return null;
+			}
+		}),
 	);
-	return [...existing, ...created];
+	return [...existing, ...created.filter((u) => u !== null)];
 };

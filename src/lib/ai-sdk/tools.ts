@@ -47,6 +47,12 @@ export const tools = {
 			}
 			// create user from neynar
 			const newUser = await getOrCreateUserByFarcasterFid(user);
+			if (!newUser) {
+				return {
+					farcasterUser: undefined,
+					text: "Unable to create user",
+				};
+			}
 			console.log("[ai-sdk] [track-tool] user saved in db", newUser.id);
 
 			return {
