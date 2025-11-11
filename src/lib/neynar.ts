@@ -78,7 +78,7 @@ export const searchUserByUsername = async (
  * @param address - The address to fetch the user by
  * @returns The user
  */
-export const fetchUserByAddress = async (
+export const fetchUserFromNeynarByAddress = async (
 	address: string,
 	viewerFid?: number,
 ): Promise<NeynarUser | undefined> => {

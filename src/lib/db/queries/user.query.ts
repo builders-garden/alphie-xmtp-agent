@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { ulid } from "ulid";
 import type { Address } from "viem";
 import { formatAvatarSrc } from "../../../utils/index.js";
-import { fetchUserByAddress } from "../../neynar.js";
+import { fetchUserFromNeynarByAddress } from "../../neynar.js";
 import {
 	account,
 	type CreateUser,
@@ -74,7 +74,9 @@ const createUserFromAddress = async (
 	if (address) {
 		if (!neynarUser) {
 			try {
-				const farcasterUser = await fetchUserByAddress(address as Address);
+				const farcasterUser = await fetchUserFromNeynarByAddress(
+					address as Address,
+				);
 				if (farcasterUser) {
 					farcasterFid = farcasterUser.fid;
 					farcasterAvatarUrl = farcasterUser.pfp_url
