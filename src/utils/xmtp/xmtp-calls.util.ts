@@ -48,7 +48,7 @@ export function swapERC20(data: {
 	const network = XMTP_NETWORKS[data.chainId];
 	const metadataInfo = {
 		currency: data.sellTokenSymbol,
-		amount: data.sellAmount.toFixed(2),
+		amount: data.sellAmount.toFixed(4),
 		decimals: data.tokenDecimals.toString(),
 		networkId: network.networkId,
 		hostname: new URL(env.APP_URL).hostname,
@@ -80,7 +80,7 @@ export function swapERC20(data: {
 			data: approvedMethodData,
 			gas: toHex("50000"), //static 50k gas for the approve call
 			metadata: {
-				description: `Approve ${data.sellAmount.toFixed(2)} ${data.sellTokenSymbol}`,
+				description: `Approve ${data.sellAmount.toFixed(4)} ${data.sellTokenSymbol}`,
 				transactionType: "approve",
 				...metadataInfo,
 			},
@@ -93,7 +93,7 @@ export function swapERC20(data: {
 		value: data.value ? toHex(data.value) : undefined,
 		gas: toHex(adjGas), //dynamic incremented gas from 0x api result
 		metadata: {
-			description: `Swap ${data.sellAmount.toFixed(2)} ${data.sellTokenSymbol} for ${data.buyTokenSymbol} on ${network.networkName}`,
+			description: `Swap ${data.sellAmount.toFixed(4)} ${data.sellTokenSymbol} for ${data.buyTokenSymbol} on ${network.networkName}`,
 			transactionType: "swap",
 			...metadataInfo,
 		},

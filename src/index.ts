@@ -29,7 +29,6 @@ import {
 	handleNotFound,
 } from "./server/middleware/error.middleware.js";
 import responseMiddleware from "./server/middleware/response.js";
-import fixRoutes from "./server/routes/fix.route.js";
 import neynarRoutes from "./server/routes/neynar.route.js";
 import trackingsRoutes from "./server/routes/trackings.route.js";
 import { ContentTypeActions } from "./types/index.js";
@@ -95,7 +94,6 @@ async function main() {
 
 	app.use("/api/v1/neynar", verifyNeynarSignatureMiddleware, neynarRoutes);
 	app.use("/api/v1/trackings", verifyApiKeyMiddleware, trackingsRoutes);
-	app.use("/api/v1/tokens", verifyApiKeyMiddleware, fixRoutes);
 
 	// Use custom middlewares for handling 404 and errors
 	app.use(handleNotFound);
@@ -120,21 +118,18 @@ async function main() {
 	xmtpAgent.use(inlineActionsMiddleware, eyesReactionMiddleware);
 
 	xmtpAgent.on("transaction-reference", async (ctx) => {
-		console.log(
-			"[xmtp] Transaction reference received event",
-			ctx.message.content,
-		);
+		console.log("[xmtp] New Tx reference received", ctx.message.content);
 		await handleXmtpTxReferenceEvent(ctx, agentAddress);
 	});
 
 	xmtpAgent.on("text", async (ctx) => {
-		console.log("[xmtp] New text received event", ctx.message.content);
+		console.log("[xmtp] New text message received", ctx.message.content);
 		await handleXmtpTextMessage(ctx, agentAddress);
 	});
 
 	xmtpAgent.on("dm", async (ctx) => {
 		const conversationId = ctx.conversation.id;
-		console.log("[xmtp] DM received event", conversationId);
+		console.log("[xmtp] New DM received", conversationId);
 		const { group, isNew } = await getOrGroupByDmConversationId(
 			conversationId,
 			ctx.conversation as Dm,
@@ -143,7 +138,7 @@ async function main() {
 		);
 		if (isNew) {
 			// If is new group, send welcome message and actions
-			console.log("[xmtp] Sending welcome message to new group", group.id);
+			console.log("[xmtp] Sending welcome message to new DM", group.id);
 			await ctx.conversation.send(WELCOME_MESSAGE);
 			const actions = getXmtpActions({ message: DEFAULT_ACTIONS_MESSAGE_2 });
 			await ctx.conversation.send(actions, ContentTypeActions);
@@ -152,7 +147,7 @@ async function main() {
 
 	xmtpAgent.on("group", async (ctx) => {
 		const conversationId = ctx.conversation.id;
-		console.log("[xmtp] Group received event", conversationId);
+		console.log("[xmtp] New group received", conversationId);
 		const { group, isNew } = await getOrCreateGroupByConversationId(
 			conversationId,
 			ctx.conversation as Group,
@@ -169,11 +164,11 @@ async function main() {
 	});
 
 	xmtpAgent.on("unknownMessage", async (ctx) => {
-		console.log(`[xmtp] Unknown message received: ${JSON.stringify(ctx)}`);
+		console.log("[xmtp] Unknown message received", ctx);
 	});
 
 	xmtpAgent.on("unhandledError", async (ctx) => {
-		console.log(`[xmtp] Unhandled error received: ${JSON.stringify(ctx)}`);
+		console.log("[xmtp] Unhandled error received", ctx);
 	});
 
 	// Handle startup
@@ -186,7 +181,7 @@ async function main() {
 
 	// Start HTTP server and capture handle for graceful shutdown
 	server = app.listen(port, () => {
-		console.log(`🚀 Express.js server is running at http://localhost:${port}`);
+		console.log(`🚀 Express.js server is running at port ${port}`);
 	});
 
 	// Unified graceful shutdown

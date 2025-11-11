@@ -225,11 +225,10 @@ export const handleXmtpTxReferenceEvent = async (
 					? `https://etherscan.io/tx/${txHash}`
 					: undefined;
 
+		// TODO update save interaction in db
+
 		await ctx.sendMarkdown(
 			`✅ Transaction received! on Network: ${networkId} tx hash: ${txHash} ${explorerUrl ? `[View on explorer](${explorerUrl})` : ""}`,
 		);
-
-		// Don't continue to other handlers since we handled this message
-		return;
 	}
 };
