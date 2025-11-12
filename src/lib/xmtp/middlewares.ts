@@ -31,7 +31,7 @@ export const inlineActionsMiddleware: AgentMiddleware = async (ctx, next) => {
 		} else {
 			const handled = await handleDurableActionById(
 				ctx,
-				intentContent.actionId,
+				intentContent.actionId
 			);
 			if (!handled) {
 				console.error("❌ Unknown action:", intentContent.actionId);
@@ -56,7 +56,7 @@ export const eyesReactionMiddleware: AgentMiddleware = async (ctx, next) => {
 					reference: ctx.message.id,
 					schema: "shortcode",
 				} as Reaction,
-				ContentTypeReaction,
+				ContentTypeReaction
 			);
 		};
 
@@ -69,7 +69,7 @@ export const eyesReactionMiddleware: AgentMiddleware = async (ctx, next) => {
 					reference: ctx.message.id,
 					schema: "shortcode",
 				} as Reaction,
-				ContentTypeReaction,
+				ContentTypeReaction
 			);
 		};
 

@@ -138,5 +138,5 @@ export type DurableActionRecord<
 
 export type DurableHandler<T extends DurableActionType> = (
 	ctx: MessageContext,
-	payload: DurableActionPayloadMap[T],
+	payload: DurableActionPayloadMap[T]
 ) => Promise<void>;

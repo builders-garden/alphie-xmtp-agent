@@ -48,11 +48,11 @@ export class IntentCodec implements ContentCodec<IntentContent> {
 		const decodedContent = new TextDecoder().decode(content.content);
 		try {
 			const safeParse = intentContentSchema.safeParse(
-				JSON.parse(decodedContent),
+				JSON.parse(decodedContent)
 			);
 			if (!safeParse.success) {
 				throw new Error(
-					`Failed to parse Intent content: ${safeParse.error.message}`,
+					`Failed to parse Intent content: ${safeParse.error.message}`
 				);
 			}
 			const parsed = safeParse.data;
@@ -62,7 +62,7 @@ export class IntentCodec implements ContentCodec<IntentContent> {
 			throw new Error(
 				`Failed to decode Intent content: ${
 					error instanceof Error ? error.message : String(error)
-				}`,
+				}`
 			);
 		}
 	}

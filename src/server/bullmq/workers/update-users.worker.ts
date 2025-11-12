@@ -32,7 +32,7 @@ export const updateUsersWorker = new Worker<UpdateUsersJobData, JobResult>(
 		},
 		stalledInterval: 30000, // Check for stalled jobs every 30 seconds (default is 30 seconds)
 		maxStalledCount: 3, // Allow job to stall 3 times before marking as failed (default is 1)
-	},
+	}
 );
 
 updateUsersWorker.on("completed", (job) => {

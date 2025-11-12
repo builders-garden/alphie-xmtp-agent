@@ -33,7 +33,7 @@ const durableHandlers: { [K in DurableActionType]: DurableHandler<K> } = {
  * @param record - The durable action record to register
  */
 export async function registerDurableAction<T extends DurableActionType>(
-	record: DurableActionRecord<T>,
+	record: DurableActionRecord<T>
 ) {
 	await createInlineAction({
 		id: record.id,
@@ -52,7 +52,7 @@ export async function registerDurableAction<T extends DurableActionType>(
  */
 export async function handleDurableActionById(
 	ctx: MessageContext,
-	actionId: string,
+	actionId: string
 ): Promise<boolean> {
 	const inlineAction = await getInlineActionById(actionId);
 	if (!inlineAction) {
@@ -76,7 +76,7 @@ export async function handleDurableActionById(
 
 	await handler(
 		ctx,
-		inlineAction.payload as DurableActionPayloadMap[DurableActionType],
+		inlineAction.payload as DurableActionPayloadMap[DurableActionType]
 	);
 	return true;
 }

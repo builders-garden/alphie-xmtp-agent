@@ -133,7 +133,7 @@ export const get0xQuote = async ({
 					"0x-api-key": env.ZEROX_API_KEY,
 					"0x-version": "v2",
 				},
-			},
+			}
 		);
 
 		if (!response.ok) {
@@ -282,7 +282,7 @@ export const get0xPrice = async ({
 					"0x-api-key": env.ZEROX_API_KEY,
 					"0x-version": "v2",
 				},
-			},
+			}
 		);
 
 		if (!response.ok) {

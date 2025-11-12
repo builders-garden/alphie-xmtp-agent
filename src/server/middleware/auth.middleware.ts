@@ -14,7 +14,7 @@ import { response } from "./response.js";
 export const verifyNeynarSignatureMiddleware = (
 	req: RequestWithRawBody,
 	_res: Response,
-	next: NextFunction,
+	next: NextFunction
 ): void | Promise<void> => {
 	if (
 		env.NODE_ENV === "development" ||
@@ -61,7 +61,7 @@ export const verifyNeynarSignatureMiddleware = (
 export const verifyApiKeyMiddleware = (
 	req: RequestWithRawBody,
 	_res: Response,
-	next: NextFunction,
+	next: NextFunction
 ): void | Promise<void> => {
 	if (env.NODE_ENV === "development") {
 		next();

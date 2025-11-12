@@ -85,7 +85,7 @@ export const upsertGroupMembers = async (
 	groupId: string,
 	membersRaw: GroupMember[],
 	_agentAddress: string,
-	agentInboxId: string,
+	agentInboxId: string
 ) => {
 	// filter out the agent from the members
 	const members = membersRaw.filter((m) => m.inboxId !== agentInboxId);
@@ -96,14 +96,14 @@ export const upsertGroupMembers = async (
 		.map((m) => ({
 			inboxId: m.inboxId,
 			address: m.accountIdentifiers.find(
-				(i) => i.identifierKind === IdentifierKind.Ethereum,
+				(i) => i.identifierKind === IdentifierKind.Ethereum
 			)?.identifier,
 		}))
 		.filter(
 			(m) =>
 				!XMTP_AGENTS.some(
-					(a) => a.address.toLowerCase() === m.address?.toLowerCase(),
-				),
+					(a) => a.address.toLowerCase() === m.address?.toLowerCase()
+				)
 		);
 	const users = await getOrCreateUsersByInboxIds(data);
 
@@ -132,14 +132,14 @@ export const upsertGroupMembers = async (
  */
 export const addGroupMembersByInboxIds = async (
 	groupId: string,
-	members: { inboxId: string; address?: string }[],
+	members: { inboxId: string; address?: string }[]
 ): Promise<void> => {
 	if (members.length === 0) return;
 	// Ensure user s exist (creating as needed)
 	const users = await Promise.all(
 		members.map((member) =>
-			getOrCreateUserByInboxId(member.inboxId, member.address),
-		),
+			getOrCreateUserByInboxId(member.inboxId, member.address)
+		)
 	);
 	const rows: CreateGroupMember[] = users
 		.filter((u) => u !== null)
@@ -170,7 +170,7 @@ export const addGroupMembersByInboxIds = async (
  */
 export const removeGroupMembersByInboxIds = async (
 	groupId: string,
-	inboxIds: string[],
+	inboxIds: string[]
 ) => {
 	if (inboxIds.length === 0) return;
 	const users = await getUsersByInboxIds(inboxIds);
@@ -193,8 +193,8 @@ export const removeGroupMembersByInboxIds = async (
 		.where(
 			and(
 				eq(groupMember.groupId, groupId),
-				inArray(groupMember.userId, userIds),
-			),
+				inArray(groupMember.userId, userIds)
+			)
 		);
 };
 
@@ -208,7 +208,7 @@ export const getOrCreateGroupByConversationId = async (
 	conversationId: string,
 	xmtpGroup: XmtpGroup,
 	agentAddress: string,
-	agentInboxId: string,
+	agentInboxId: string
 ): Promise<{ group: Group; isNew: boolean }> => {
 	const group = await getGroupByConversationId(conversationId);
 	if (!group) {
@@ -236,7 +236,7 @@ export const getOrGroupByDmConversationId = async (
 	conversationId: string,
 	xmtpDm: XmtpDm,
 	agentAddress: string,
-	agentInboxId: string,
+	agentInboxId: string
 ): Promise<{ group: Group; isNew: boolean }> => {
 	const group = await getGroupByConversationId(conversationId);
 	if (!group) {
@@ -257,14 +257,14 @@ export const getOrGroupByDmConversationId = async (
  * @returns The resolved `group.id` or null if not found
  */
 export const resolveGroupId = async (
-	idOrConversationId: string,
+	idOrConversationId: string
 ): Promise<string | null> => {
 	if (!idOrConversationId) return null;
 	// Try by group.id first
 	const byId = await db.query.group.findFirst({
 		where: or(
 			eq(group.id, idOrConversationId),
-			eq(group.conversationId, idOrConversationId),
+			eq(group.conversationId, idOrConversationId)
 		),
 	});
 	if (byId) {

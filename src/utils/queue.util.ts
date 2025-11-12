@@ -25,7 +25,7 @@ export const updateUsersToQueue = async ({
 				type: "exponential",
 				delay: 2000,
 			},
-		},
+		}
 	);
 	return job;
 };

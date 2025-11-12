@@ -21,5 +21,5 @@ export const updateUsersQueue = new Queue<UpdateUsersJobData>(
 				age: 7 * 24 * 3600, // Remove failed jobs after 7 days
 			},
 		},
-	},
+	}
 );

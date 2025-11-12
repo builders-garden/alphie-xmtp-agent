@@ -19,7 +19,7 @@ export const tools = {
 				.optional()
 				.nullable()
 				.describe(
-					"The Farcaster username of the person to track, the username can also be an Ethereum ENS name",
+					"The Farcaster username of the person to track, the username can also be an Ethereum ENS name"
 				),
 			farcasterFid: z
 				.number()
@@ -31,14 +31,14 @@ export const tools = {
 				.optional()
 				.nullable()
 				.describe(
-					"The Ethereum address of the person to track, starting with 0x",
+					"The Ethereum address of the person to track, starting with 0x"
 				),
 		}),
 		execute: async ({ farcasterFid, farcasterUsername, ethereumAddress }) => {
 			console.log(
 				"[ai-sdk] [track-tool] track this farcaster user",
 				farcasterFid,
-				farcasterUsername,
+				farcasterUsername
 			);
 			let user: NeynarUser | null = null;
 			if (farcasterFid) {

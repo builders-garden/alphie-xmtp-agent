@@ -74,7 +74,7 @@ export const createXmtpAgent = async () => {
  */
 export const handleXmtpTextMessage = async (
 	ctx: XMTPMessageContext,
-	agentAddress: string,
+	agentAddress: string
 ) => {
 	try {
 		// skip if message has no content or is from the agent or its a reaction
@@ -105,14 +105,14 @@ export const handleXmtpTextMessage = async (
 				conversationId,
 				ctx.conversation,
 				agentAddress,
-				ctx.client.inboxId,
+				ctx.client.inboxId
 			);
 			console.log(`[xmtp] Group ${group.id} isNew: ${isNew}`);
 
 			if (ctx.message.contentType?.typeId === "group_updated") {
 				// Handle group updates
 				console.log(
-					`[xmtp] Group updated message received: ${JSON.stringify(ctx.message)}`,
+					`[xmtp] Group updated message received: ${JSON.stringify(ctx.message)}`
 				);
 				const xmtpMessage = ctx.message as GroupUpdatedMessage;
 				const xmtpMembers = await ctx.conversation.members();
@@ -182,7 +182,7 @@ export const handleXmtpTextMessage = async (
  */
 export const handleXmtpTxReferenceEvent = async (
 	ctx: XMTPMessageContext,
-	_agentAddress: string,
+	_agentAddress: string
 ) => {
 	// Check if this is a transaction reference message
 	if (ctx.usesCodec(TransactionReferenceCodec)) {
@@ -206,13 +206,13 @@ export const handleXmtpTxReferenceEvent = async (
 		if (!txRef.reference) {
 			console.error(
 				"❌ Transaction reference message received but no reference found",
-				ctx.message,
+				ctx.message
 			);
 			return;
 		}
 
 		console.log(
-			`[tx-reference-middleware] tx reference message received from ${senderAddress} ${txRef.reference} network ${txRef.networkId}`,
+			`[tx-reference-middleware] tx reference message received from ${senderAddress} ${txRef.reference} network ${txRef.networkId}`
 		);
 		const networkId = isHex(txRef.networkId)
 			? fromHex(txRef.networkId, "number")
@@ -228,7 +228,7 @@ export const handleXmtpTxReferenceEvent = async (
 		// TODO update save interaction in db
 
 		await ctx.sendMarkdown(
-			`✅ Transaction received! on Network: ${networkId} tx hash: ${txHash} ${explorerUrl ? `[View on explorer](${explorerUrl})` : ""}`,
+			`✅ Transaction received! on Network: ${networkId} tx hash: ${txHash} ${explorerUrl ? `[View on explorer](${explorerUrl})` : ""}`
 		);
 	}
 };

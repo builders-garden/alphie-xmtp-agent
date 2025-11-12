@@ -253,7 +253,7 @@ export async function getTokenBalance({
 		balanceRaw: balance.result.toString(),
 		balance: formatUnits(
 			balance.result as bigint,
-			tokenDecimals.result as number,
+			tokenDecimals.result as number
 		),
 		tokenDecimals: tokenDecimals.result as number,
 		sellSymbol: sellSymbol.result as string,

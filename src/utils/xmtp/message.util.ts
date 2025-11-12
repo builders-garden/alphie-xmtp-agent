@@ -30,7 +30,7 @@ import type {
 export async function isReplyToAgent(
 	message: DecodedMessage,
 	agentInboxId: string,
-	client: Client<XMTPContentTypes>,
+	client: Client<XMTPContentTypes>
 ): Promise<boolean> {
 	// Check if the message is a reply type
 	if (message.contentType && message.contentType.typeId === "reply") {
@@ -46,14 +46,14 @@ export async function isReplyToAgent(
 
 			// Get the conversation to find the referenced message
 			const conversation = await client.conversations.getConversationById(
-				message.conversationId,
+				message.conversationId
 			);
 
 			if (!conversation) {
 				console.error(
 					"Conversation not found",
 					message.conversationId,
-					"on reply to message",
+					"on reply to message"
 				);
 				return false;
 			}
@@ -61,7 +61,7 @@ export async function isReplyToAgent(
 			// Get recent messages to find the referenced one
 			const messages = await conversation.messages();
 			const referencedMessage = messages.find(
-				(msg) => msg.id === referenceMessageId,
+				(msg) => msg.id === referenceMessageId
 			);
 
 			if (!referencedMessage) {
@@ -77,7 +77,7 @@ export async function isReplyToAgent(
 		} catch (error) {
 			console.error(
 				"Error checking if message is a reply to the agent:",
-				error,
+				error
 			);
 			return false;
 		}
@@ -114,7 +114,7 @@ export function extractMessageContent(message: DecodedMessage): string {
 			// Format: 'Replied with "actual message" to an earlier message'
 			const fallbackText = message.fallback;
 			const match = fallbackText.match(
-				/Replied with "(.+)" to an earlier message/,
+				/Replied with "(.+)" to an earlier message/
 			);
 			if (match?.[1]) {
 				const actualMessage = match[1];
@@ -211,7 +211,7 @@ export async function shouldRespondToMessage({
 
 	// Check if message contains any trigger words/phrases or a mention of the agent
 	const hasTrigger = AGENT_TRIGGERS.some((trigger) =>
-		lowerMessage.includes(trigger.toLowerCase()),
+		lowerMessage.includes(trigger.toLowerCase())
 	);
 	if (hasTrigger) {
 		return true;
@@ -229,7 +229,7 @@ export async function shouldRespondToMessage({
 		`${agentAddress.slice(0, 6)}...${agentAddress.slice(-4)}`.toLowerCase(),
 	];
 	const hasShortenedAgentAddress = agentAddresses.some((address) =>
-		messageContent.includes(address),
+		messageContent.includes(address)
 	);
 	if (hasShortenedAgentAddress) {
 		return true;
@@ -251,7 +251,7 @@ export function shouldSendHelpHint(message: string): boolean {
 	const lowerMessage = message.toLowerCase().trim();
 
 	const isOnlyAgentTrigger = AGENT_TRIGGERS.some(
-		(trigger) => lowerMessage === trigger.toLowerCase(),
+		(trigger) => lowerMessage === trigger.toLowerCase()
 	);
 	if (isOnlyAgentTrigger) {
 		return true;
@@ -290,13 +290,13 @@ export const handleGroupUpdated = async ({
 
 	// track metadata changes
 	const hasChangedName = xmtpMessage.content.metadataFieldChanges?.find(
-		(c) => c.fieldName === "group_name",
+		(c) => c.fieldName === "group_name"
 	);
 	const hasChangedDescription = xmtpMessage.content.metadataFieldChanges?.find(
-		(c) => c.fieldName === "group_description",
+		(c) => c.fieldName === "group_description"
 	);
 	const hasChangedImageUrl = xmtpMessage.content.metadataFieldChanges?.find(
-		(c) => c.fieldName === "group_image_url_square",
+		(c) => c.fieldName === "group_image_url_square"
 	);
 	if (
 		addedInboxes.length > 0 ||
@@ -313,7 +313,7 @@ export const handleGroupUpdated = async ({
 				hasChangedName,
 				hasChangedDescription,
 				hasChangedImageUrl,
-			}),
+			})
 		);
 
 		// Update group metadata if changed
@@ -346,7 +346,7 @@ export const handleGroupUpdated = async ({
 				.map((inboxId) => {
 					const member = xmtpMembers.find((m) => m.inboxId === inboxId);
 					const address = member?.accountIdentifiers.find(
-						(i) => i.identifierKind === IdentifierKind.Ethereum,
+						(i) => i.identifierKind === IdentifierKind.Ethereum
 					)?.identifier;
 					return { inboxId, address };
 				})
@@ -354,8 +354,8 @@ export const handleGroupUpdated = async ({
 				.filter(
 					(m) =>
 						!XMTP_AGENTS.some(
-							(a) => a.address.toLowerCase() === m.address?.toLowerCase(),
-						),
+							(a) => a.address.toLowerCase() === m.address?.toLowerCase()
+						)
 				);
 
 			if (membersToAdd.length > 0) {

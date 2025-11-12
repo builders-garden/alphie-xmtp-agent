@@ -9,7 +9,7 @@ import { db } from "../index.js";
  * @returns The latest neynar webhook
  */
 export const getNeynarWebhookByIdFromDb = async (
-	neynarWebhookId: string,
+	neynarWebhookId: string
 ): Promise<NeynarWebhook | undefined> => {
 	const data = await db.query.neynarWebhook.findFirst({
 		where: eq(neynarWebhook.neynarWebhookId, neynarWebhookId),
@@ -26,7 +26,7 @@ export const getNeynarWebhookByIdFromDb = async (
  * @returns The updated neynar webhook
  */
 export const updateNeynarWebhookInDb = async (
-	webhook: NeynarWebhookSuccessResponse,
+	webhook: NeynarWebhookSuccessResponse
 ) => {
 	let trackedFids: number[] | undefined;
 	let minimumTokenAmountUsdc: number | undefined;

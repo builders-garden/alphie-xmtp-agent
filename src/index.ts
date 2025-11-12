@@ -58,7 +58,7 @@ async function main() {
 			origin: allowedOrigins,
 			credentials: true,
 			methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-		}),
+		})
 	);
 	app.use(cookieParserMiddleware());
 	app.use(
@@ -67,7 +67,7 @@ async function main() {
 				// capture raw body for HMAC verification
 				(req as RequestWithRawBody).rawBody = buf.toString("utf8");
 			},
-		}),
+		})
 	);
 	app.use(helmet());
 	app.use(morganLogger("dev"));
@@ -84,7 +84,7 @@ async function main() {
 				challenge: true,
 				unauthorizedResponse: "Unauthorized",
 			}),
-			getBullboardRouter("/admin/queues"),
+			getBullboardRouter("/admin/queues")
 		);
 	}
 
@@ -134,7 +134,7 @@ async function main() {
 			conversationId,
 			ctx.conversation as Dm,
 			agentAddress,
-			ctx.client.inboxId,
+			ctx.client.inboxId
 		);
 		if (isNew) {
 			// If is new group, send welcome message and actions
@@ -152,7 +152,7 @@ async function main() {
 			conversationId,
 			ctx.conversation as Group,
 			agentAddress,
-			ctx.client.inboxId,
+			ctx.client.inboxId
 		);
 		if (isNew) {
 			// If is new group, send welcome message and actions
@@ -198,7 +198,7 @@ async function main() {
 			new Promise<void>((resolve) => {
 				if (!server) return resolve();
 				server.close(() => resolve());
-			}),
+			})
 		);
 
 		// Stop XMTP Agent
@@ -222,7 +222,7 @@ async function main() {
 						redisConnection.disconnect();
 					} catch {}
 				}
-			})(),
+			})()
 		);
 
 		await Promise.allSettled(tasks);

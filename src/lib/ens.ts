@@ -31,7 +31,7 @@ export async function getEnsName(address: Address): Promise<string | null> {
  * @returns
  */
 export async function getAddressFromEnsName(
-	ensName: string,
+	ensName: string
 ): Promise<Address | null> {
 	const address = await mainnetClient.getEnsAddress({
 		name: normalize(ensName),
@@ -67,7 +67,7 @@ export async function getBasename(address: Address): Promise<string | null> {
  * @returns
  */
 export async function getAddressFromBasename(
-	basename: string,
+	basename: string
 ): Promise<Address | null> {
 	const address = await getAddressFromOnchainkit({
 		name: normalize(basename),

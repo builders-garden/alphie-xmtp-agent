@@ -21,7 +21,7 @@ export const handleUpdateTrackings = async (req: Request, res: Response) => {
 		if (!parseBody.success) {
 			console.error(
 				"[update-trackings] Invalid request body",
-				parseBody.error.message,
+				parseBody.error.message
 			);
 			res.status(400).json({
 				status: "nok",
@@ -117,7 +117,7 @@ export const checkJobStatus = async (req: Request, res: Response) => {
 				progress: typeof progress === "number" ? progress : 0,
 				delayReason: job.opts.delay ? "Scheduled delay" : "Retry backoff",
 				processAt: new Date(
-					job.processedOn || Date.now() + (job.opts.delay || 0),
+					job.processedOn || Date.now() + (job.opts.delay || 0)
 				),
 				createdAt: new Date(job.timestamp),
 				updatedAt: new Date(job.timestamp),
@@ -154,7 +154,7 @@ export const checkJobStatus = async (req: Request, res: Response) => {
  * Get the position of a job in the queue
  */
 async function getJobPosition(
-	job: Job<UpdateUsersJobData>,
+	job: Job<UpdateUsersJobData>
 ): Promise<number | null> {
 	try {
 		const waitingJobs = await updateUsersQueue.getWaitingCount();

@@ -59,7 +59,7 @@ export const sendTestNeynarTradeCreatedWebhook = async (groupId: string) => {
 	if (!response.ok) {
 		const text = await response.text().catch(() => "");
 		console.error(
-			`Webhook call failed: ${response.status} ${response.statusText} ${text}`,
+			`Webhook call failed: ${response.status} ${response.statusText} ${text}`
 		);
 		return {
 			success: false,

@@ -31,7 +31,7 @@ import { swapERC20 } from "./xmtp-calls.util.js";
 export const registerXmtpActions = () => {
 	registerAction("start-tracking", async (ctx) => {
 		await ctx.sendText(
-			"🔍 Tag me (@alphie.base.eth) and tell me the farcaster username or FID of the user you want to track\n\nExamples:\nHey @alphie.base.eth start tracking user with fid 3",
+			"🔍 Tag me (@alphie.base.eth) and tell me the farcaster username or FID of the user you want to track\n\nExamples:\nHey @alphie.base.eth start tracking user with fid 3"
 		);
 	});
 
@@ -115,7 +115,7 @@ export const getXmtpCopyTradeAction = async ({
  */
 export async function handleCopyTrade(
 	ctx: MessageContext,
-	payload: DurableActionPayloadMap["copytrade"],
+	payload: DurableActionPayloadMap["copytrade"]
 ) {
 	const { transaction, agentAddress, userUsername } = payload;
 	const senderAddress = await ctx.getSenderAddress();
@@ -137,13 +137,13 @@ export async function handleCopyTrade(
 	const user = await getUserByInboxId(senderInboxId);
 	if (!user) {
 		console.error(
-			"❌ Unable to get user by inbox id, skipping inline action interaction",
+			"❌ Unable to get user by inbox id, skipping inline action interaction"
 		);
 		return;
 	}
 
 	console.log(
-		`Copy trade of ${transaction.transactionHash} on ${transaction.chainId}`,
+		`Copy trade of ${transaction.transactionHash} on ${transaction.chainId}`
 	);
 
 	// check if a user has enough balance of the sell token
@@ -156,7 +156,7 @@ export async function handleCopyTrade(
 	let sellAmount = Number.parseFloat(transaction.sellAmount);
 	let sellAmountInDecimals = parseUnits(
 		transaction.sellAmount,
-		tokenBalance.tokenDecimals,
+		tokenBalance.tokenDecimals
 	);
 	const hasEnoughEth =
 		Number.parseFloat(ethBalance.balanceRaw) >
@@ -190,7 +190,7 @@ export async function handleCopyTrade(
 	});
 
 	console.log(
-		`[xmtp-action copytrade] tx hash ${transaction.transactionHash} on chain ${transaction.chainId} has enough eth: ${hasEnoughEth}, has enough token: ${hasEnoughToken}, has some token: ${hasSomeToken}`,
+		`[xmtp-action copytrade] tx hash ${transaction.transactionHash} on chain ${transaction.chainId} has enough eth: ${hasEnoughEth}, has enough token: ${hasEnoughToken}, has some token: ${hasSomeToken}`
 	);
 
 	// if user does not have gas
@@ -259,7 +259,7 @@ export async function handleCopyTrade(
 	const dm = await ctx.client.conversations.newDm(senderInboxId);
 	await dm.send(
 		walletSendCalls as unknown as WalletSendCallsParams,
-		ContentTypeWalletSendCalls,
+		ContentTypeWalletSendCalls
 	);
 
 	const groupInDb = await getGroupByConversationId(ctx.conversation.id);
@@ -268,11 +268,11 @@ export async function handleCopyTrade(
 		: "";
 	await dm.send(
 		`This transaction has been copied from the user @${userUsername}${groupStr}`,
-		ContentTypeMarkdown,
+		ContentTypeMarkdown
 	);
 
 	await ctx.conversation.send(
 		`💸 Copy trade sent to you via DM, open [chat here](cbwallet://messaging/${agentAddress})`,
-		ContentTypeMarkdown,
+		ContentTypeMarkdown
 	);
 }

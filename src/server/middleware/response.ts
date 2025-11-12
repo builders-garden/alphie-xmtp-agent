@@ -24,7 +24,7 @@ const response: {
 const responseMiddleware = (
 	_req: Request,
 	res: Response,
-	next: NextFunction,
+	next: NextFunction
 ): void => {
 	response.success = (payload: ResponsePayload): void => {
 		res.status(payload.status || 200).json({

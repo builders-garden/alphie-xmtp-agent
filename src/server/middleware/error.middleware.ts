@@ -4,7 +4,7 @@ import { response } from "./response.js";
 export function handleNotFound(
 	req: Request,
 	_res: Response,
-	next: NextFunction,
+	next: NextFunction
 ) {
 	response.invalid({
 		message: `Not Found - ${req.method} ${req.originalUrl}`,
@@ -16,7 +16,7 @@ export function handleError(
 	_err: Error,
 	_req: Request,
 	_res: Response,
-	next: NextFunction,
+	next: NextFunction
 ) {
 	response.failure({});
 

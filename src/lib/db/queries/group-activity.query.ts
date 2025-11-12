@@ -7,7 +7,7 @@ import { db } from "../index.js";
  * @returns The saved group activities
  */
 export const saveActivityForMultipleGroups = async (
-	data: CreateGroupActivity[],
+	data: CreateGroupActivity[]
 ) => {
 	const activities = await db
 		.insert(groupActivity)

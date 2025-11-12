@@ -34,7 +34,7 @@ export const neynarWebhookSubscriptionFiltersSchema = z
 	.and(
 		z.object({
 			"trade.created": tradeCreatedSubscriptionFilterSchema,
-		}),
+		})
 	);
 
 export const neynarWebhookSubscriptionSchema = z
@@ -42,13 +42,13 @@ export const neynarWebhookSubscriptionSchema = z
 	.and(
 		z.object({
 			filters: neynarWebhookSubscriptionFiltersSchema,
-		}),
+		})
 	);
 
 export const neynarWebhookSchema = z.custom<Webhook>().and(
 	z.object({
 		subscription: neynarWebhookSubscriptionSchema,
-	}),
+	})
 );
 export type NeynarWebhook = z.infer<typeof neynarWebhookSchema>;
 

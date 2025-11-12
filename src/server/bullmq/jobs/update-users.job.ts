@@ -21,7 +21,7 @@ import type { JobResult, UpdateUsersJobData } from "../../../types/index.js";
  * @param job - The BullMQ job containing the processing request
  */
 export const processUpdateUsersJob = async (
-	job: Job<UpdateUsersJobData>,
+	job: Job<UpdateUsersJobData>
 ): Promise<JobResult> => {
 	const { addUsers: jobAddUsers, removeUsers: jobRemoveUsers } = job.data;
 
@@ -55,7 +55,7 @@ export const processUpdateUsersJob = async (
 		}
 		console.log(
 			"neynarWebhook",
-			neynarWebhook.subscription.filters["trade.created"],
+			neynarWebhook.subscription.filters["trade.created"]
 		);
 
 		// Normalize inputs
@@ -74,7 +74,7 @@ export const processUpdateUsersJob = async (
 				trackingAddsRaw.map(async (row) => {
 					const resolved = await resolveGroupId(row.groupId);
 					return resolved ? { groupId: resolved, userId: row.userId } : null;
-				}),
+				})
 			)
 		).filter((r): r is { groupId: string; userId: string } => r !== null);
 
@@ -101,7 +101,7 @@ export const processUpdateUsersJob = async (
 		// Calculate merged FIDs with reference counting so a fid stays on the webhook
 		// as long as at least one group is still tracking it after this job.
 		const currentWebhookFids = Array.isArray(
-			neynarWebhook.subscription.filters["trade.created"].fids,
+			neynarWebhook.subscription.filters["trade.created"].fids
 		)
 			? neynarWebhook.subscription.filters["trade.created"].fids
 			: [];
@@ -114,11 +114,11 @@ export const processUpdateUsersJob = async (
 		// Unique pair counts by fid
 		const addCountsByFid = computeAddCountsByFid(
 			trackingAddsResolved,
-			addUserIdToFid,
+			addUserIdToFid
 		);
 		const removeCountsByFid = computeRemoveCountsByFid(
 			removalsByResolvedGroup,
-			removeUserIdToFid,
+			removeUserIdToFid
 		);
 
 		// Only recompute for fids actually affected in this job
@@ -126,8 +126,8 @@ export const processUpdateUsersJob = async (
 		const baseCounts = await Promise.all(
 			Array.from(fidsToCheck).map(
 				async (fid) =>
-					[fid, await countGroupsTrackingUserByFarcasterFid(fid)] as const,
-			),
+					[fid, await countGroupsTrackingUserByFarcasterFid(fid)] as const
+			)
 		);
 		const baseCountByFid = new Map<number, number>(baseCounts);
 
@@ -154,7 +154,7 @@ export const processUpdateUsersJob = async (
 			if (trackingAddsResolved.length > 0) {
 				await addUsersToGroupTrackings(trackingAddsResolved);
 				console.log(
-					`[update-users-job] Ensured group trackings for users ${trackingAddsResolved.map((u) => u.userId)}`,
+					`[update-users-job] Ensured group trackings for users ${trackingAddsResolved.map((u) => u.userId)}`
 				);
 			}
 			if (hasRemovals) {
@@ -162,7 +162,7 @@ export const processUpdateUsersJob = async (
 					await removeUsersFromGroupTrackings(groupId, userIds);
 				}
 				console.log(
-					`[update-users-job] Removed users from group trackings ${Array.from(removalsByResolvedGroup.values()).flat()}`,
+					`[update-users-job] Removed users from group trackings ${Array.from(removalsByResolvedGroup.values()).flat()}`
 				);
 			}
 			await job.updateProgress(100);
@@ -184,14 +184,14 @@ export const processUpdateUsersJob = async (
 		if ("webhook" in updatedWebhook) {
 			await updateNeynarWebhookInDb(updatedWebhook);
 			console.log(
-				`[update-users-job] Webhook updated successfully in db ${updatedWebhook.webhook.webhook_id}`,
+				`[update-users-job] Webhook updated successfully in db ${updatedWebhook.webhook.webhook_id}`
 			);
 			await job.updateProgress(80);
 			// add users to group trackings (for all addUsers requested)
 			if (trackingAddsResolved.length > 0) {
 				await addUsersToGroupTrackings(trackingAddsResolved);
 				console.log(
-					`[update-users-job] Added users to group trackings ${trackingAddsResolved.map((u) => u.userId)}`,
+					`[update-users-job] Added users to group trackings ${trackingAddsResolved.map((u) => u.userId)}`
 				);
 			}
 
@@ -201,7 +201,7 @@ export const processUpdateUsersJob = async (
 					await removeUsersFromGroupTrackings(groupId, userIds);
 				}
 				console.log(
-					`[update-users-job] Removed users from group trackings ${Array.from(removalsByResolvedGroup.values()).flat()}`,
+					`[update-users-job] Removed users from group trackings ${Array.from(removalsByResolvedGroup.values()).flat()}`
 				);
 			}
 			await job.updateProgress(100);
@@ -213,7 +213,7 @@ export const processUpdateUsersJob = async (
 
 		console.error(
 			"[update-users-job] error in updating neynar webhook",
-			updatedWebhook,
+			updatedWebhook
 		);
 		throw new Error("Error updating the webhook");
 	} catch (error) {
@@ -240,7 +240,7 @@ const areSetsEqual = <T>(a: Set<T>, b: Set<T>) => {
  * @returns A map from userId to fid
  */
 const getUserIdToFidMap = (
-	users: Array<{ userId: string; fid: number | undefined }>,
+	users: Array<{ userId: string; fid: number | undefined }>
 ) => {
 	const map = new Map<string, number>();
 	for (const u of users) {
@@ -259,7 +259,7 @@ const getUserIdToFidMap = (
  */
 const computeAddCountsByFid = (
 	trackingAddsResolved: Array<{ groupId: string; userId: string }>,
-	addUserIdToFid: Map<string, number>,
+	addUserIdToFid: Map<string, number>
 ) => {
 	const seen = new Set<string>();
 	const counts = new Map<number, number>();
@@ -286,7 +286,7 @@ const computeAddCountsByFid = (
  */
 const computeRemoveCountsByFid = (
 	removalsByResolvedGroup: Map<string, string[]>,
-	removeUserIdToFid: Map<string, number>,
+	removeUserIdToFid: Map<string, number>
 ) => {
 	const seen = new Set<string>();
 	const counts = new Map<number, number>();

@@ -1,9 +1,12 @@
 import { createPublicClient, http } from "viem";
 import * as chains from "viem/chains";
+import { env } from "../lib/env.js";
 
 export const basePublicClient = createPublicClient({
 	chain: chains.base,
-	transport: http(),
+	transport: http(
+		`https://api.developer.coinbase.com/rpc/v1/base/${env.COINBASE_CDP_CLIENT_API_KEY}`
+	),
 });
 
 /**

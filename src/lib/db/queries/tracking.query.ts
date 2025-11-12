@@ -15,7 +15,7 @@ export const addUsersToGroupTrackings = async (
 		groupId: string;
 		userId: string;
 		addedByUserId?: string;
-	}[],
+	}[]
 ) => {
 	return await db.insert(groupTrackedUser).values(rows).onConflictDoNothing();
 };
@@ -68,15 +68,15 @@ export const addUserToGroupTrackingByFid = async ({
  */
 export const removeUsersFromGroupTrackings = async (
 	groupId: string,
-	userIds: string[],
+	userIds: string[]
 ) => {
 	return await db
 		.delete(groupTrackedUser)
 		.where(
 			and(
 				eq(groupTrackedUser.groupId, groupId),
-				inArray(groupTrackedUser.userId, userIds),
-			),
+				inArray(groupTrackedUser.userId, userIds)
+			)
 		);
 };
 
@@ -102,7 +102,7 @@ export const countGroupsTrackingUserByFarcasterFid = async (fid: number) => {
  */
 export const getGroupsTrackingUserByUserId = async (
 	userId: string,
-	groupId?: string,
+	groupId?: string
 ) => {
 	if (!userId) {
 		return [];
@@ -133,7 +133,7 @@ export const getGroupsTrackingUserByUserId = async (
  */
 export const getGroupsTrackingUserByFarcasterFid = async (
 	fid: number,
-	groupId?: string,
+	groupId?: string
 ) => {
 	if (fid < 0) {
 		console.error(`[getGroupsTrackingUserByFarcasterFid] Invalid fid ${fid}`);
@@ -142,7 +142,7 @@ export const getGroupsTrackingUserByFarcasterFid = async (
 	const user = await getUserByFarcasterFid(fid);
 	if (!user) {
 		console.error(
-			`[getGroupsTrackingUserByFarcasterFid] User not found for fid ${fid}`,
+			`[getGroupsTrackingUserByFarcasterFid] User not found for fid ${fid}`
 		);
 		return [];
 	}

@@ -44,7 +44,7 @@ export const aiGenerateAnswer = async ({
 
 	// 2. parse the output
 	const outputStep = response.steps[0].content.find(
-		(part) => part.type === "tool-result",
+		(part) => part.type === "tool-result"
 	);
 	console.log("Output Step:", outputStep);
 	if (outputStep) {

@@ -11,7 +11,7 @@ export const codexClient = new Codex(env.CODEX_API_KEY);
  */
 export const getTokenInfoFromCodex = async (
 	address: string,
-	networkId: number,
+	networkId: number
 ) => {
 	const token = await codexClient.queries.token({
 		input: {

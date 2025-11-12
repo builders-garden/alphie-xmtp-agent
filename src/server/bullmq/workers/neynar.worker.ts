@@ -12,13 +12,13 @@ export const neynarWebhookWorker = new Worker<NeynarWebhookJobData, JobResult>(
 	async (job) => {
 		try {
 			console.log(
-				`| neynar-webhook-worker | processing job #${job.id} | userId: ${job.data.user.fid} | txHash: ${job.data.transaction.transactionHash}`,
+				`| neynar-webhook-worker | processing job #${job.id} | userId: ${job.data.user.fid} | txHash: ${job.data.transaction.transactionHash}`
 			);
 
 			const result = await processNeynarWebhookJob(job);
 
 			console.log(
-				`| neynar-webhook-worker | completed job #${job.id} | txHash: ${result.status}`,
+				`| neynar-webhook-worker | completed job #${job.id} | txHash: ${result.status}`
 			);
 
 			return result;
@@ -36,7 +36,7 @@ export const neynarWebhookWorker = new Worker<NeynarWebhookJobData, JobResult>(
 		},
 		stalledInterval: 30000, // Check for stalled jobs every 30 seconds (default is 30 seconds)
 		maxStalledCount: 3, // Allow job to stall 3 times before marking as failed (default is 1)
-	},
+	}
 );
 
 neynarWebhookWorker.on("completed", (job) => {

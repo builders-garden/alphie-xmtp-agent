@@ -21,7 +21,7 @@ const neynarClient = new NeynarAPIClient(config);
  */
 export const fetchBulkUsersFromNeynar = async (
 	fids: number[],
-	viewerFid?: number,
+	viewerFid?: number
 ): Promise<NeynarUser[]> => {
 	if (!fids) return [];
 
@@ -39,7 +39,7 @@ export const fetchBulkUsersFromNeynar = async (
  * @returns The user
  */
 export const fetchUserFromNeynarByFid = async (
-	fid: number,
+	fid: number
 ): Promise<NeynarUser | null> => {
 	if (!fid) return null;
 	const users = await fetchBulkUsersFromNeynar([fid]);
@@ -55,7 +55,7 @@ export const fetchUserFromNeynarByFid = async (
  */
 export const searchUserByUsername = async (
 	username: string,
-	viewerFid?: number,
+	viewerFid?: number
 ): Promise<NeynarUser | null> => {
 	const data = await neynarClient.searchUser({
 		q: username,
@@ -80,7 +80,7 @@ export const searchUserByUsername = async (
  */
 export const fetchUserFromNeynarByAddress = async (
 	address: string,
-	viewerFid?: number,
+	viewerFid?: number
 ): Promise<NeynarUser | undefined> => {
 	const data = await neynarClient.fetchBulkUsersByEthOrSolAddress({
 		addresses: [address],
@@ -150,7 +150,7 @@ export const createNeynarWebhookTradeCreated = async ({
 						},
 					},
 				},
-			},
+			}
 		)
 		.json();
 	return data;

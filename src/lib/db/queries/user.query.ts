@@ -18,7 +18,7 @@ import { db } from "../index.js";
  * Get user by XMTP inboxId
  */
 export const getUserByInboxId = async (
-	inboxId: string,
+	inboxId: string
 ): Promise<(User & { farcaster?: Farcaster }) | null> => {
 	const row = await db.query.farcaster.findFirst({
 		where: eq(farcaster.inboxId, inboxId),
@@ -62,7 +62,7 @@ export const createUser = async (input: CreateUser) => {
 const createUserFromAddress = async (
 	inboxId?: string,
 	address?: string,
-	neynarUser?: NeynarUser,
+	neynarUser?: NeynarUser
 ): Promise<User & { farcaster?: Farcaster }> => {
 	let farcasterFid: number | undefined = neynarUser?.fid;
 	let farcasterAvatarUrl: string | null = neynarUser?.pfp_url
@@ -75,7 +75,7 @@ const createUserFromAddress = async (
 		if (!neynarUser) {
 			try {
 				const farcasterUser = await fetchUserFromNeynarByAddress(
-					address as Address,
+					address as Address
 				);
 				if (farcasterUser) {
 					farcasterFid = farcasterUser.fid;
@@ -93,7 +93,7 @@ const createUserFromAddress = async (
 
 	if (!farcasterFid) {
 		throw new Error(
-			"Unable to resolve Farcaster FID for user creation. Address or Neynar user with fid is required.",
+			"Unable to resolve Farcaster FID for user creation. Address or Neynar user with fid is required."
 		);
 	}
 
@@ -111,8 +111,8 @@ const createUserFromAddress = async (
 				.where(
 					and(
 						eq(farcaster.fid, farcasterFid),
-						eq(farcaster.userId, existingFc.user.id),
-					),
+						eq(farcaster.userId, existingFc.user.id)
+					)
 				);
 		}
 
@@ -138,7 +138,7 @@ const createUserFromAddress = async (
 		const ensuredFarcasterFid: number = farcasterFid;
 		if (!address) {
 			throw new Error(
-				"Cannot create farcaster profile without custody address",
+				"Cannot create farcaster profile without custody address"
 			);
 		}
 
@@ -180,7 +180,7 @@ const createUserFromAddress = async (
  */
 export const getOrCreateUserByInboxId = async (
 	inboxId: string,
-	address?: string,
+	address?: string
 ): Promise<(User & { farcaster?: Farcaster }) | null> => {
 	try {
 		const existing = await getUserByInboxId(inboxId);
@@ -201,7 +201,7 @@ export const getOrCreateUserByInboxId = async (
  * @returns
  */
 export const getOrCreateUserByFarcasterFid = async (
-	neynarUser: NeynarUser,
+	neynarUser: NeynarUser
 ): Promise<(User & { farcaster?: Farcaster }) | null> => {
 	try {
 		const existing = await getUserByFarcasterFid(neynarUser.fid);
@@ -223,7 +223,7 @@ export const getOrCreateUserByFarcasterFid = async (
  * Get users by a list of inboxIds
  */
 export const getUsersByInboxIds = async (
-	inboxIds: string[],
+	inboxIds: string[]
 ): Promise<(User & { farcaster?: Farcaster })[]> => {
 	if (inboxIds.length === 0) return [];
 	const rows = await db.query.farcaster.findMany({
@@ -239,14 +239,14 @@ export const getUsersByInboxIds = async (
  * @returns
  */
 export const getOrCreateUsersByInboxIds = async (
-	data: { inboxId: string; address?: string }[],
+	data: { inboxId: string; address?: string }[]
 ) => {
 	const inboxIds = data.map((d) => d.inboxId);
 	const existing = await getUsersByInboxIds(inboxIds);
 	const existingInboxIds = new Set(
 		existing
 			.map((r) => r.farcaster?.inboxId)
-			.filter((v): v is string => Boolean(v)),
+			.filter((v): v is string => Boolean(v))
 	);
 	const toCreate = data.filter((d) => !existingInboxIds.has(d.inboxId));
 	const created = await Promise.all(
@@ -257,7 +257,7 @@ export const getOrCreateUsersByInboxIds = async (
 				console.error("an error occured creating the user", err);
 				return null;
 			}
-		}),
+		})
 	);
 	return [...existing, ...created.filter((u) => u !== null)];
 };

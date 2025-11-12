@@ -55,7 +55,7 @@ export const getAllTokensWithoutImage = async () => {
  */
 export const updateTokenImageUrl = async (
 	tokenId: string,
-	imageUrl: string,
+	imageUrl: string
 ) => {
 	const [token] = await db
 		.update(tokens)

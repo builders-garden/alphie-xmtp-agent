@@ -20,7 +20,7 @@ export async function createInlineAction(record: CreateInlineAction) {
  * @returns The inline action, or undefined if not found
  */
 export async function getInlineActionById(
-	id: string,
+	id: string
 ): Promise<InlineAction | undefined> {
 	const rows = await db
 		.select()

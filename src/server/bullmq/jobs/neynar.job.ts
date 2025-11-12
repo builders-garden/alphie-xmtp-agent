@@ -30,14 +30,14 @@ import { getTokenPriceAndFdv } from "../../../utils/token.util.js";
  * @param job - The BullMQ job containing the processing request
  */
 export const processNeynarWebhookJob = async (
-	job: Job<NeynarWebhookJobData>,
+	job: Job<NeynarWebhookJobData>
 ): Promise<JobResult> => {
 	const { user, transaction, rawTransaction, groupId } = job.data;
 	let progress = 5;
 
 	console.log(
 		`[neynar-webhook-job] Starting job ${job.id} for user ${user.fid}`,
-		job.data,
+		job.data
 	);
 	await job.updateProgress(progress);
 
@@ -50,7 +50,7 @@ export const processNeynarWebhookJob = async (
 		if (activity && env.NODE_ENV === "production") {
 			await job.updateProgress(100);
 			console.log(
-				`[neynar-webhook-job] job ${job.id} Activity already exists in db for tx hash ${transaction.transactionHash} on chain ${transaction.chainId}`,
+				`[neynar-webhook-job] job ${job.id} Activity already exists in db for tx hash ${transaction.transactionHash} on chain ${transaction.chainId}`
 			);
 			return {
 				status: "success",
@@ -62,7 +62,7 @@ export const processNeynarWebhookJob = async (
 		const userInDb = await getUserByFarcasterFid(user.fid);
 		if (!userInDb) {
 			console.error(
-				`[neynar-webhook-job] job ${job.id} ❌ Unable to get user in db`,
+				`[neynar-webhook-job] job ${job.id} ❌ Unable to get user in db`
 			);
 			return {
 				status: "failed",
@@ -75,7 +75,7 @@ export const processNeynarWebhookJob = async (
 		if (groups.length === 0) {
 			await job.updateProgress(100);
 			console.log(
-				`[neynar-webhook-job] job ${job.id} No groups found for user ${user.fid}`,
+				`[neynar-webhook-job] job ${job.id} No groups found for user ${user.fid}`
 			);
 			return {
 				status: "success",
@@ -90,7 +90,7 @@ export const processNeynarWebhookJob = async (
 		const agentAddress = xmtpAgent.address;
 		if (!agentAddress) {
 			console.error(
-				`[neynar-webhook-job] job ${job.id} ❌ Unable to get xmtp agent address`,
+				`[neynar-webhook-job] job ${job.id} ❌ Unable to get xmtp agent address`
 			);
 			return {
 				status: "failed",
@@ -160,7 +160,7 @@ export const processNeynarWebhookJob = async (
 		// if still no token info, return error
 		if (!sellToken || !buyToken) {
 			console.error(
-				`[neynar-webhook-job] job ${job.id} ❌ Unable to get token info`,
+				`[neynar-webhook-job] job ${job.id} ❌ Unable to get token info`
 			);
 			return {
 				status: "failed",
@@ -219,17 +219,17 @@ export const processNeynarWebhookJob = async (
 				headers: {
 					"x-api-secret": env.API_KEY_SECRET,
 				},
-			},
+			}
 		);
 		if (!ogImageRes.ok) {
 			console.error(
-				`[neynar-webhook-job] job ${job.id} ❌ Unable to generate og image for tx ${transaction.transactionHash} on chain ${transaction.chainId}`,
+				`[neynar-webhook-job] job ${job.id} ❌ Unable to generate og image for tx ${transaction.transactionHash} on chain ${transaction.chainId}`
 			);
 		}
 		const ogImage = await ogImageRes.json();
 		console.log(
 			`[neynar-webhook-job] job ${job.id} Og image generated for tx ${transaction.transactionHash} on chain ${transaction.chainId}`,
-			ogImage,
+			ogImage
 		);
 
 		// build copy trade action
@@ -242,7 +242,7 @@ export const processNeynarWebhookJob = async (
 		progress = 15;
 		await job.updateProgress(progress);
 		console.log(
-			`[neynar-webhook-job] job ${job.id} Building copy trade action`,
+			`[neynar-webhook-job] job ${job.id} Building copy trade action`
 		);
 
 		const totalGroups = groups.length;
@@ -253,11 +253,11 @@ export const processNeynarWebhookJob = async (
 		for (const group of groups) {
 			const conversation =
 				await xmtpAgent.client.conversations.getConversationById(
-					group.group.conversationId,
+					group.group.conversationId
 				);
 			if (!conversation) {
 				console.error(
-					`[neynar-webhook-job] job ${job.id} ❌ Unable to get conversation`,
+					`[neynar-webhook-job] job ${job.id} ❌ Unable to get conversation`
 				);
 				return {
 					status: "failed",
@@ -268,17 +268,17 @@ export const processNeynarWebhookJob = async (
 			// send copy trade action to the group chat
 			await conversation.send(action, ContentTypeActions);
 			await conversation.send(
-				`See more details here ${env.APP_URL}/g/${group.groupId}/tx/${transaction.transactionHash}`,
+				`See more details here ${env.APP_URL}/g/${group.groupId}/tx/${transaction.transactionHash}`
 			);
 			console.log(
-				`[neynar-webhook-job] job ${job.id} Copy trade action sent to the group chat ${conversation.id}`,
+				`[neynar-webhook-job] job ${job.id} Copy trade action sent to the group chat ${conversation.id}`
 			);
 
 			completedGroups += 1;
 			progress += incrementProgress;
 			await job.updateProgress(progress);
 			console.log(
-				`[neynar-webhook-job] Progress: ${progress}% (${completedGroups}/${totalGroups})`,
+				`[neynar-webhook-job] Progress: ${progress}% (${completedGroups}/${totalGroups})`
 			);
 		}
 

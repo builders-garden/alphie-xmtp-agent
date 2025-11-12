@@ -152,7 +152,7 @@ export const group = sqliteTable(
 		createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 		updatedAt: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	},
-	(t) => [uniqueIndex("group_conversation_id_unique_idx").on(t.conversationId)],
+	(t) => [uniqueIndex("group_conversation_id_unique_idx").on(t.conversationId)]
 );
 
 /**
@@ -172,7 +172,7 @@ export const groupMember = sqliteTable(
 	},
 	(t) => [
 		uniqueIndex("group_member_group_user_unique_idx").on(t.groupId, t.userId),
-	],
+	]
 );
 
 /**
@@ -196,9 +196,9 @@ export const groupTrackedUser = sqliteTable(
 		primaryKey({ columns: [t.groupId, t.userId] }),
 		uniqueIndex("group_tracked_user_group_user_unique_idx").on(
 			t.groupId,
-			t.userId,
+			t.userId
 		),
-	],
+	]
 );
 
 /**
@@ -256,7 +256,7 @@ export const userActivity = sqliteTable(
 			foreignColumns: [t.chainId, t.txHash],
 			name: "group_activity_parent_activity_id_fk",
 		}),
-	],
+	]
 );
 
 /**
@@ -279,7 +279,7 @@ export const groupActivity = sqliteTable(
 			foreignColumns: [userActivity.chainId, userActivity.txHash],
 			name: "group_activity_activity_id_fk",
 		}),
-	],
+	]
 );
 
 /**
@@ -333,7 +333,7 @@ export const inlineActionInteraction = sqliteTable(
 			foreignColumns: [userActivity.txHash, userActivity.chainId],
 			name: "inline_action_interaction_user_activity_id_fk",
 		}),
-	],
+	]
 );
 
 /**
@@ -475,7 +475,7 @@ export const groupTrackedUserRelations = relations(
 			fields: [groupTrackedUser.addedByUserId],
 			references: [user.id],
 		}),
-	}),
+	})
 );
 
 export const userActivityRelations = relations(userActivity, ({ one }) => ({
@@ -519,5 +519,5 @@ export const inlineActionInteractionRelations = relations(
 			fields: [inlineActionInteraction.inlineActionId],
 			references: [inlineAction.id],
 		}),
-	}),
+	})
 );

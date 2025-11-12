@@ -32,7 +32,7 @@ export function registerAction(actionId: string, handler: ActionHandler): void {
  */
 export async function sendActions(
 	ctx: MessageContext,
-	actionsContent: ActionsContent,
+	actionsContent: ActionsContent
 ): Promise<void> {
 	await ctx.conversation.send(actionsContent, ContentTypeActions);
 }
@@ -69,7 +69,7 @@ export async function sendConfirmation({
 		onNo ||
 			(async (ctx) => {
 				await ctx.sendText("❌ Cancelled");
-			}),
+			})
 	);
 
 	if (prevMessage) {

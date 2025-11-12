@@ -75,7 +75,7 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 		if (!receivingToken || !sendingToken) {
 			console.error(
 				"[neynar-controller] No token found from neynar webhooktransaction",
-				transaction,
+				transaction
 			);
 			res.status(200).json({
 				status: "failed",
@@ -121,7 +121,7 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 					type: "exponential",
 					delay: 2000,
 				},
-			},
+			}
 		);
 
 		// Return immediately with job information
@@ -147,7 +147,7 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
  */
 export const handleTestWebhookGroupEvent = async (
 	req: Request,
-	res: Response,
+	res: Response
 ) => {
 	try {
 		const parseBody = testWebhookGroupTradeCreatedSchema.safeParse(req.body);
@@ -188,7 +188,7 @@ export const handleTestWebhookGroupEvent = async (
 		} else {
 			console.error(
 				"[neynar-controller] No net transfer found in transaction",
-				transaction,
+				transaction
 			);
 			res.status(500).json({
 				status: "failed",
@@ -200,7 +200,7 @@ export const handleTestWebhookGroupEvent = async (
 		if (!receivingToken || !sendingToken) {
 			console.error(
 				"[neynar-controller] No token found from neynar webhooktransaction",
-				transaction,
+				transaction
 			);
 			res.status(200).json({
 				status: "failed",
@@ -241,7 +241,7 @@ export const handleTestWebhookGroupEvent = async (
 					type: "exponential",
 					delay: 2000,
 				},
-			},
+			}
 		);
 
 		// Return immediately with job information
@@ -318,7 +318,7 @@ export const checkJobStatus = async (req: Request, res: Response) => {
 				progress: typeof progress === "number" ? progress : 0,
 				delayReason: job.opts.delay ? "Scheduled delay" : "Retry backoff",
 				processAt: new Date(
-					job.processedOn || Date.now() + (job.opts.delay || 0),
+					job.processedOn || Date.now() + (job.opts.delay || 0)
 				),
 				createdAt: new Date(job.timestamp),
 				updatedAt: new Date(job.timestamp),
@@ -355,7 +355,7 @@ export const checkJobStatus = async (req: Request, res: Response) => {
  * Get the position of a job in the queue
  */
 async function getJobPosition(
-	job: Job<NeynarWebhookJobData>,
+	job: Job<NeynarWebhookJobData>
 ): Promise<number | null> {
 	try {
 		const waitingJobs = await neynarWebhookQueue.getWaitingCount();

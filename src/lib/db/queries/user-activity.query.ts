@@ -33,7 +33,7 @@ export const getUserActivityByTxHashAndChainId = async ({
 	const activity = await db.query.userActivity.findFirst({
 		where: and(
 			eq(userActivity.txHash, txHash),
-			eq(userActivity.chainId, chainId),
+			eq(userActivity.chainId, chainId)
 		),
 	});
 	return activity;

@@ -12,7 +12,7 @@ import { db } from "../index.js";
  * @returns The created inline action interaction
  */
 export async function createInlineActionInteraction(
-	record: CreateInlineActionInteraction,
+	record: CreateInlineActionInteraction
 ) {
 	const [interaction] = await db
 		.insert(inlineActionInteraction)
@@ -30,7 +30,7 @@ export async function createInlineActionInteraction(
  */
 export async function updateInlineActionInteraction(
 	id: string,
-	record: UpdateInlineActionInteraction,
+	record: UpdateInlineActionInteraction
 ) {
 	const [updatedInteraction] = await db
 		.update(inlineActionInteraction)
