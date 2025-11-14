@@ -62,7 +62,7 @@ export async function getTokenInfo({
 			},
 		],
 	});
-	if (!tokenDecimals.result || !sellSymbol.result || !buySymbol.result) {
+	if (!(tokenDecimals.result && sellSymbol.result && buySymbol.result)) {
 		console.error("Unable to get token decimals, sell symbol, or buy symbol");
 		throw new Error("Unable to get token decimals, sell symbol, or buy symbol");
 	}
@@ -98,7 +98,7 @@ export async function getEthBalance({
 		publicClient = basePublicClient;
 	}
 	const balance = await publicClient.getBalance({
-		address: address,
+		address,
 	});
 
 	return {
@@ -135,7 +135,7 @@ export async function getTokenBalance({
 }> {
 	// handle sellToken is ETH
 	if (sellTokenAddress === zeroAddress) {
-		const balance = await getEthBalance({
+		const ethBalance = await getEthBalance({
 			address,
 			chainId,
 		});
@@ -143,8 +143,8 @@ export async function getTokenBalance({
 		// handle also buyToken is ETH
 		if (buyTokenAddress === zeroAddress) {
 			return {
-				balanceRaw: balance.balanceRaw,
-				balance: balance.balance,
+				balanceRaw: ethBalance.balanceRaw,
+				balance: ethBalance.balance,
 				tokenDecimals: 18,
 				sellSymbol: "ETH",
 				buySymbol: "ETH",
@@ -167,8 +167,8 @@ export async function getTokenBalance({
 			functionName: "symbol",
 		});
 		return {
-			balanceRaw: balance.balanceRaw,
-			balance: balance.balance,
+			balanceRaw: ethBalance.balanceRaw,
+			balance: ethBalance.balance,
 			tokenDecimals: 18,
 			sellSymbol: "ETH",
 			buySymbol: buySymbol.normalize(),

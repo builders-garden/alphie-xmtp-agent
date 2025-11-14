@@ -72,7 +72,7 @@ export const handleWebhookEvent = async (req: Request, res: Response) => {
 			sendingToken = transaction.net_transfer.sending_fungible;
 		}
 
-		if (!receivingToken || !sendingToken) {
+		if (!(receivingToken && sendingToken)) {
 			console.error(
 				"[neynar-controller] No token found from neynar webhooktransaction",
 				transaction
@@ -197,7 +197,7 @@ export const handleTestWebhookGroupEvent = async (
 			return;
 		}
 
-		if (!receivingToken || !sendingToken) {
+		if (!(receivingToken && sendingToken)) {
 			console.error(
 				"[neynar-controller] No token found from neynar webhooktransaction",
 				transaction

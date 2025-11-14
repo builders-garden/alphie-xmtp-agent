@@ -56,7 +56,7 @@ export const generateKeys = async () => {
 	const envContent = `# keys for ${exampleName}
 XMTP_WALLET_KEY=${walletKey}
 XMTP_DB_ENCRYPTION_KEY=${encryptionKeyHex}
-${!xmtpEnvExists ? "XMTP_ENV=dev\n" : ""}# public key is ${publicKey}
+${xmtpEnvExists ? "" : "XMTP_ENV=dev\n"}# public key is ${publicKey}
 `;
 
 	// Write the .env file to the example directory

@@ -116,8 +116,6 @@ export const tools = {
 		description:
 			"Default response when the request is not related to the tracking of new users",
 		inputSchema: z.object({}),
-		execute: async () => {
-			return HELP_HINT_MESSAGE;
-		},
+		execute: async () => HELP_HINT_MESSAGE,
 	}),
 };

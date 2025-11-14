@@ -33,6 +33,13 @@
 			"correctness": {
 				"useExhaustiveDependencies": "info"
 			},
+      "performance": {
+        "noNamespaceImport": "off",
+        "noBarrelFile": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off"
+      },
 			"nursery": {
 				"useSortedClasses": {
 					"level": "warn",
@@ -43,17 +50,25 @@
 				}
 			},
 			"style": {
+        "useBlockStatements": "off",
+        "useNumericSeparators": "off",
 				"noParameterAssign": "error",
+        "noNestedTernary": "off",
 				"useAsConstAssertion": "error",
 				"useDefaultParameterLast": "error",
 				"useEnumInitializers": "error",
 				"useSelfClosingElements": "error",
 				"useSingleVarDeclarator": "error",
 				"noUnusedTemplateLiteral": "error",
+        "noEnum": "off",
 				"useNumberNamespace": "error",
 				"noInferrableTypes": "error",
-				"noUselessElse": "error"
-			}
+				"noUselessElse": "error",
+        "useReadonlyClassProperties": "off"
+			},
+      "suspicious": {
+        "noEmptyBlockStatements": "off"
+      }
 		}
 	},
 	"javascript": {

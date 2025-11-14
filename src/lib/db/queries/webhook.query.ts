@@ -15,7 +15,7 @@ export const getNeynarWebhookByIdFromDb = async (
 		where: eq(neynarWebhook.neynarWebhookId, neynarWebhookId),
 	});
 	if (!data) {
-		return undefined;
+		return;
 	}
 	return data;
 };

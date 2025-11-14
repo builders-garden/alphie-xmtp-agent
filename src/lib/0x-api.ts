@@ -33,13 +33,7 @@ export const get0xQuote = async ({
 }): Promise<QuoteResponse> => {
 	// Validate required parameters
 	try {
-		if (
-			!chainId ||
-			!buyToken ||
-			!sellToken ||
-			!sellAmountInDecimals ||
-			!taker
-		) {
+		if (!(chainId && buyToken && sellToken && sellAmountInDecimals && taker)) {
 			return {
 				status: "nok",
 				error: "Missing required parameters",
@@ -90,20 +84,19 @@ export const get0xQuote = async ({
 						"swapFeeToken",
 						"tradeSurplusRecipient",
 						"swapFeeToken",
-					].includes(param)
+					].includes(param) &&
+					!isAddress(value)
 				) {
-					if (!isAddress(value)) {
-						return {
-							status: "nok",
-							error: `Invalid ${param} address format`,
-						};
-					}
+					return {
+						status: "nok",
+						error: `Invalid ${param} address format`,
+					};
 				}
 
 				// Validate numeric parameters
 				if (["swapFeeBps", "slippageBps"].includes(param)) {
 					const num = Number.parseInt(value, 10);
-					if (Number.isNaN(num) || num < 0 || num > 10000) {
+					if (Number.isNaN(num) || num < 0 || num > 10_000) {
 						return {
 							status: "nok",
 							error: `${param} must be between 0 and 10000`,
@@ -112,13 +105,14 @@ export const get0xQuote = async ({
 				}
 
 				// Validate sellEntireBalance enum
-				if (param === "sellEntireBalance") {
-					if (!["true", "false"].includes(value)) {
-						return {
-							status: "nok",
-							error: "sellEntireBalance must be 'true' or 'false'",
-						};
-					}
+				if (
+					param === "sellEntireBalance" &&
+					!["true", "false"].includes(value)
+				) {
+					return {
+						status: "nok",
+						error: "sellEntireBalance must be 'true' or 'false'",
+					};
 				}
 
 				params.append(param, value);
@@ -201,7 +195,7 @@ export const get0xPrice = async ({
 }): Promise<PriceResponse> => {
 	// Validate required parameters
 	try {
-		if (!chainId || !buyToken || !sellToken || !sellAmount || !taker) {
+		if (!(chainId && buyToken && sellToken && sellAmount && taker)) {
 			return {
 				status: "nok",
 				error: "Missing required parameters",
@@ -249,20 +243,19 @@ export const get0xPrice = async ({
 						"swapFeeRecipient",
 						"swapFeeToken",
 						"tradeSurplusRecipient",
-					].includes(param)
+					].includes(param) &&
+					!isAddress(value)
 				) {
-					if (!isAddress(value)) {
-						return {
-							status: "nok",
-							error: `Invalid ${param} address format`,
-						};
-					}
+					return {
+						status: "nok",
+						error: `Invalid ${param} address format`,
+					};
 				}
 
 				// Validate numeric parameters
 				if (["swapFeeBps", "slippageBps"].includes(param)) {
 					const num = Number.parseInt(value, 10);
-					if (Number.isNaN(num) || num < 0 || num > 10000) {
+					if (Number.isNaN(num) || num < 0 || num > 10_000) {
 						return {
 							status: "nok",
 							error: `${param} must be between 0 and 10000`,
@@ -296,7 +289,7 @@ export const get0xPrice = async ({
 		const data = (await response.json()) as ZeroXPriceResponse;
 		return {
 			status: "ok",
-			data: data,
+			data,
 		};
 	} catch (error) {
 		console.error("0x API Error:", error);

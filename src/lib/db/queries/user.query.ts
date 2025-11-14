@@ -71,23 +71,21 @@ const createUserFromAddress = async (
 	let farcasterUsername: string | undefined = neynarUser?.username;
 	let farcasterDisplayName: string | undefined = neynarUser?.display_name;
 
-	if (address) {
-		if (!neynarUser) {
-			try {
-				const farcasterUser = await fetchUserFromNeynarByAddress(
-					address as Address
-				);
-				if (farcasterUser) {
-					farcasterFid = farcasterUser.fid;
-					farcasterAvatarUrl = farcasterUser.pfp_url
-						? formatAvatarSrc(farcasterUser.pfp_url)
-						: null;
-					farcasterUsername = farcasterUser.username;
-					farcasterDisplayName = farcasterUser.display_name;
-				}
-			} catch (error) {
-				console.error("Error fetching Farcaster user:", error);
+	if (address && !neynarUser) {
+		try {
+			const farcasterUser = await fetchUserFromNeynarByAddress(
+				address as Address
+			);
+			if (farcasterUser) {
+				farcasterFid = farcasterUser.fid;
+				farcasterAvatarUrl = farcasterUser.pfp_url
+					? formatAvatarSrc(farcasterUser.pfp_url)
+					: null;
+				farcasterUsername = farcasterUser.username;
+				farcasterDisplayName = farcasterUser.display_name;
 			}
+		} catch (error) {
+			console.error("Error fetching Farcaster user:", error);
 		}
 	}
 

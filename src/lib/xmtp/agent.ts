@@ -47,7 +47,7 @@ export const createXmtpAgent = async () => {
 	const customDbPath = (inboxId: string) =>
 		`${env.RAILWAY_VOLUME_MOUNT_PATH}/${env.XMTP_ENV}-${inboxId.slice(0, 8)}.db3`;
 
-	return Agent.createFromEnv({
+	return await Agent.createFromEnv({
 		env: env.XMTP_ENV,
 		dbEncryptionKey,
 		dbPath: customDbPath,
@@ -201,14 +201,13 @@ export const handleXmtpTxReferenceEvent = async (
 						transactionReference: TransactionReference;
 					}
 				).transactionReference;
+			} else {
+				console.error(
+					"❌ Transaction reference message received but no reference found",
+					ctx.message
+				);
+				return;
 			}
-		}
-		if (!txRef.reference) {
-			console.error(
-				"❌ Transaction reference message received but no reference found",
-				ctx.message
-			);
-			return;
 		}
 
 		console.log(

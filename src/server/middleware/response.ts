@@ -1,11 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 
-interface ResponsePayload {
+type ResponsePayload = {
 	status?: number;
 	message?: string;
 	data?: unknown;
 	total_count?: number;
-}
+};
 
 const response: {
 	success(payload: ResponsePayload): void;

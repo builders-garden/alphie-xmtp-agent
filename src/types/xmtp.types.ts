@@ -25,7 +25,7 @@ export type XMTPContentTypes =
 	| TransactionReference;
 export type XMTPMessageContext = MessageContext<XMTPContentTypes>;
 
-export interface GroupUpdatedMessage {
+export type GroupUpdatedMessage = {
 	conversationId: string;
 	contentType: { typeId: "group_updated" };
 	content: {
@@ -42,7 +42,7 @@ export interface GroupUpdatedMessage {
 		}>;
 		initiatedByInboxId?: string; // Who triggered the update
 	};
-}
+};
 
 // Extended context type to include inline actions metadata
 export interface InlineActionsContext extends MessageContext {

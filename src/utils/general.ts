@@ -4,9 +4,8 @@ import { fromString } from "uint8arrays";
  * @param encryptionKey - The encryption key string
  * @returns The encryption key
  */
-export const getEncryptionKeyFromString = (encryptionKey: string) => {
-	return fromString(encryptionKey);
-};
+export const getEncryptionKeyFromString = (encryptionKey: string) =>
+	fromString(encryptionKey);
 
 /**
  * Format the avatar src for imagedelivery.net images to reasonable avatar sizes

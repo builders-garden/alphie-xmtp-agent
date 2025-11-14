@@ -313,6 +313,5 @@ const computeRemoveCountsByFid = (
  * @param mapB - The second map
  * @returns A set of keys
  */
-const setsFromKeys = <K>(mapA: Map<K, unknown>, mapB: Map<K, unknown>) => {
-	return new Set<K>([...Array.from(mapA.keys()), ...Array.from(mapB.keys())]);
-};
+const setsFromKeys = <K>(mapA: Map<K, unknown>, mapB: Map<K, unknown>) =>
+	new Set<K>([...Array.from(mapA.keys()), ...Array.from(mapB.keys())]);

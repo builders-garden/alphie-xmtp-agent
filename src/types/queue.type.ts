@@ -21,12 +21,12 @@ export const updateUsersJobDataSchema = z.object({
 
 export type UpdateUsersJobData = z.infer<typeof updateUsersJobDataSchema>;
 
-export interface NeynarWebhookJobData {
+export type NeynarWebhookJobData = {
 	user: HandleCopyTradeSchema["user"];
 	transaction: HandleCopyTradeSchema["transaction"];
 	rawTransaction: string;
 	groupId?: string;
-}
+};
 
 const jobResultSuccessSchema = z.object({
 	status: z.literal("success"),

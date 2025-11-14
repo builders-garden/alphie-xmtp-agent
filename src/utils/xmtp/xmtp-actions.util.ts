@@ -200,15 +200,12 @@ export async function handleCopyTrade(
 		await ctx.sendText(message);
 		return;
 	}
-	// if user balance is lower than the sell amount
-	if (!hasEnoughToken) {
-		// if user has no balance at all, return
-		if (!hasSomeToken) {
-			const message = `❌ User does not have enough balance of ${tokenBalance.sellSymbol} ${transaction.sellToken} for wallet ${senderAddress}`;
-			console.error(message);
-			await ctx.sendText(message);
-			return;
-		}
+	// if user balance is lower than the sell amount and has no balance at all, return
+	if (!(hasEnoughToken || hasSomeToken)) {
+		const message = `❌ User does not have enough balance of ${tokenBalance.sellSymbol} ${transaction.sellToken} for wallet ${senderAddress}`;
+		console.error(message);
+		await ctx.sendText(message);
+		return;
 	}
 
 	// get 0x quote
@@ -216,7 +213,7 @@ export async function handleCopyTrade(
 		...transaction,
 		sellAmountInDecimals: sellAmountInDecimals.toString(),
 		taker: senderAddress as Address,
-		agentAddress: agentAddress,
+		agentAddress,
 	});
 	if (quote.status === "nok") {
 		const message = `❌ Unable to get quote from 0x api for the swap of ${tokenBalance.sellSymbol} to ${tokenBalance.buySymbol} on chain ${transaction.chainId} for wallet ${senderAddress}`;

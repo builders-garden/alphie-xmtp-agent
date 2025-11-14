@@ -111,7 +111,7 @@ export const processNeynarWebhookJob = async (
 		});
 
 		// get token info from onchain and save in db
-		if (!sellToken || !buyToken) {
+		if (!(sellToken && buyToken)) {
 			const [sellTokenCodexInfo, buyTokenCodexInfo, onchainTokenInfo] =
 				await Promise.all([
 					getTokenInfoFromCodex(transaction.sellToken, transaction.chainId),
@@ -158,7 +158,7 @@ export const processNeynarWebhookJob = async (
 		}
 
 		// if still no token info, return error
-		if (!sellToken || !buyToken) {
+		if (!(sellToken && buyToken)) {
 			console.error(
 				`[neynar-webhook-job] job ${job.id} ❌ Unable to get token info`
 			);

@@ -16,10 +16,8 @@ export const basePublicClient = createPublicClient({
  */
 export const getChainByName = (chainName: string) => {
 	for (const chain of Object.values(chains)) {
-		if ("id" in chain) {
-			if (chain.name.toLowerCase() === chainName.toLowerCase()) {
-				return chain;
-			}
+		if ("id" in chain && chain.name.toLowerCase() === chainName.toLowerCase()) {
+			return chain;
 		}
 	}
 

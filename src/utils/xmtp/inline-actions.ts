@@ -67,8 +67,8 @@ export async function sendConfirmation({
 	registerAction(
 		noId,
 		onNo ||
-			(async (ctx) => {
-				await ctx.sendText("❌ Cancelled");
+			(async (msgCtx) => {
+				await msgCtx.sendText("❌ Cancelled");
 			})
 	);
 
@@ -83,18 +83,16 @@ export async function sendConfirmation({
 
 // Validation helpers
 export const validators = {
-	inboxId: (input: string) => {
-		return isHex(input.trim()) && input.trim().length === 64
+	inboxId: (input: string) =>
+		isHex(input.trim()) && input.trim().length === 64
 			? { valid: true }
-			: { valid: false, error: "Invalid Inbox ID format (64 hex chars)" };
-	},
+			: { valid: false, error: "Invalid Inbox ID format (64 hex chars)" },
 
-	ethereumAddress: (input: string) => {
-		return isAddress(input.trim())
+	ethereumAddress: (input: string) =>
+		isAddress(input.trim())
 			? { valid: true }
 			: {
 					valid: false,
 					error: "Invalid Ethereum address format (0x + 40 hex chars)",
-				};
-	},
+				},
 };

@@ -34,18 +34,15 @@ export const saveTokenInDb = async (data: CreateTokens) => {
  *
  * @returns All tokens
  */
-export const getAllTokens = async () => {
-	return await db.query.tokens.findMany();
-};
+export const getAllTokens = async () => await db.query.tokens.findMany();
 /**
  *
  * @returns All tokens
  */
-export const getAllTokensWithoutImage = async () => {
-	return await db.query.tokens.findMany({
+export const getAllTokensWithoutImage = async () =>
+	await db.query.tokens.findMany({
 		where: isNull(tokens.imageUrl),
 	});
-};
 
 /**
  * Update the image URL of a token

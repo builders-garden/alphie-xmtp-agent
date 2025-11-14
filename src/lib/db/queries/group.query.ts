@@ -74,9 +74,8 @@ export const updateGroup = async (newGroup: UpdateGroup) => {
  * Delete group by id
  * @param groupId - The group id
  */
-export const deleteGroupById = async (groupId: string) => {
-	return await db.delete(group).where(eq(group.id, groupId));
-};
+export const deleteGroupById = async (groupId: string) =>
+	await db.delete(group).where(eq(group.id, groupId));
 
 /**
  * Upsert members for a group based on inboxIds
@@ -210,8 +209,8 @@ export const getOrCreateGroupByConversationId = async (
 	agentAddress: string,
 	agentInboxId: string
 ): Promise<{ group: Group; isNew: boolean }> => {
-	const group = await getGroupByConversationId(conversationId);
-	if (!group) {
+	const exisistingGroup = await getGroupByConversationId(conversationId);
+	if (!exisistingGroup) {
 		const newGroup = await createGroup({
 			id: ulid(),
 			conversationId,
@@ -223,7 +222,7 @@ export const getOrCreateGroupByConversationId = async (
 		await upsertGroupMembers(newGroup.id, members, agentAddress, agentInboxId);
 		return { group: newGroup, isNew: true };
 	}
-	return { group, isNew: false };
+	return { group: exisistingGroup, isNew: false };
 };
 
 /**
@@ -238,8 +237,8 @@ export const getOrGroupByDmConversationId = async (
 	agentAddress: string,
 	agentInboxId: string
 ): Promise<{ group: Group; isNew: boolean }> => {
-	const group = await getGroupByConversationId(conversationId);
-	if (!group) {
+	const exisistingGroup = await getGroupByConversationId(conversationId);
+	if (!exisistingGroup) {
 		const newGroup = await createGroup({
 			id: ulid(),
 			conversationId,
@@ -248,7 +247,7 @@ export const getOrGroupByDmConversationId = async (
 		await upsertGroupMembers(newGroup.id, members, agentAddress, agentInboxId);
 		return { group: newGroup, isNew: true };
 	}
-	return { group, isNew: false };
+	return { group: exisistingGroup, isNew: false };
 };
 
 /**

@@ -16,9 +16,7 @@ export const addUsersToGroupTrackings = async (
 		userId: string;
 		addedByUserId?: string;
 	}[]
-) => {
-	return await db.insert(groupTrackedUser).values(rows).onConflictDoNothing();
-};
+) => await db.insert(groupTrackedUser).values(rows).onConflictDoNothing();
 
 /**
  * Add user to group trackings by Farcaster FID
@@ -69,8 +67,8 @@ export const addUserToGroupTrackingByFid = async ({
 export const removeUsersFromGroupTrackings = async (
 	groupId: string,
 	userIds: string[]
-) => {
-	return await db
+) =>
+	await db
 		.delete(groupTrackedUser)
 		.where(
 			and(
@@ -78,7 +76,6 @@ export const removeUsersFromGroupTrackings = async (
 				inArray(groupTrackedUser.userId, userIds)
 			)
 		);
-};
 
 /**
  * Count how many groups track a user by Farcaster FID

@@ -101,8 +101,7 @@ export const getNeynarWebhookById = async (webhookId: string) => {
 	});
 	console.log("data", JSON.stringify(data, null, 2));
 	if (
-		!("webhook" in data) ||
-		!data.webhook ||
+		!("webhook" in data && data.webhook) ||
 		("success" in data && !data.success)
 	) {
 		return null;
@@ -210,8 +209,7 @@ export const updateNeynarWebhookTradeCreated = async ({
 	}
 	const data = (await response.json()) as NeynarWebhookResponse;
 	if (
-		!("webhook" in data) ||
-		!data.webhook ||
+		!("webhook" in data && data.webhook) ||
 		("success" in data && !data.success)
 	) {
 		console.error("Failed to update webhook", JSON.stringify(data, null, 2));

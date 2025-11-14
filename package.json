@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "check": "biome check --write .",
     "format": "npx @biomejs/biome format --write ./src",
+    "format:check": "npx @biomejs/biome check --write ./src",
     "gen:keys": "pnpm build && node ./dist/utils/generate-keys.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

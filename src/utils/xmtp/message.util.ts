@@ -38,7 +38,7 @@ export async function isReplyToAgent(
 			// Check the parameters for the reference message ID
 			const parameters = message.parameters;
 
-			if (!parameters || !parameters.reference) {
+			if (!parameters?.reference) {
 				return false;
 			}
 
@@ -69,11 +69,11 @@ export async function isReplyToAgent(
 			}
 
 			// Check if the referenced message was sent by the agent
-			const isReplyToAgent =
+			const isReplyToAgentMessage =
 				referencedMessage.senderInboxId.toLowerCase() ===
 				agentInboxId.toLowerCase();
 
-			return isReplyToAgent;
+			return isReplyToAgentMessage;
 		} catch (error) {
 			console.error(
 				"Error checking if message is a reply to the agent:",
@@ -101,11 +101,13 @@ export function extractMessageContent(message: DecodedMessage): string {
 		const replyContent = message.content as Reply;
 
 		// Check if content is in the main content field
-		if (replyContent && typeof replyContent === "object") {
-			// Try different possible property names for the actual content
-			if (replyContent.content) {
-				return String(replyContent.content);
-			}
+		// Try different possible property names for the actual content
+		if (
+			replyContent &&
+			typeof replyContent === "object" &&
+			replyContent?.content
+		) {
+			return String(replyContent.content);
 		}
 
 		// Check fallback field (might contain the actual user message)
@@ -114,7 +116,7 @@ export function extractMessageContent(message: DecodedMessage): string {
 			// Format: 'Replied with "actual message" to an earlier message'
 			const fallbackText = message.fallback;
 			const match = fallbackText.match(
-				/Replied with "(.+)" to an earlier message/
+				/Replied with "(.+)" to an earlier message/g
 			);
 			if (match?.[1]) {
 				const actualMessage = match[1];
@@ -165,8 +167,8 @@ export function extractMessageContent(message: DecodedMessage): string {
 export function containsAgentMention(text: string): boolean {
 	const normalized = text.normalize();
 	const patterns = [
-		/(^|\s)@?alphie(\b|[^a-z0-9_])/i,
-		/(^|\s)@?alphie\.base\.eth(\b|[^a-z0-9_])/i,
+		/(^|\s)@?alphie(\b|[^a-z0-9_])/gi,
+		/(^|\s)@?alphie\.base\.eth(\b|[^a-z0-9_])/gi,
 	];
 	return patterns.some((re) => re.test(normalized));
 }
