@@ -36,8 +36,8 @@ importers:
         specifier: ^0.13.8
         version: 0.13.8(typescript@5.9.3)(zod@4.1.12)
       '@xmtp/agent-sdk':
-        specifier: ^1.1.13
-        version: 1.1.13(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)
+        specifier: ^1.1.14
+        version: 1.1.14(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)
       '@xmtp/content-type-group-updated':
         specifier: ^2.0.2
         version: 2.0.2
@@ -1752,8 +1752,8 @@ packages:
     resolution: {integrity: sha512-Nst5JdK47VIl9UcGwtv2Rcgyn5lWtZ0/mhRQ4G8NN2isxpq2TO30iqHzmwoJycjWuyUfg3GFXqP/gFHXeV57IA==}
     engines: {node: '>=16.0.0'}
 
-  '@xmtp/agent-sdk@1.1.13':
-    resolution: {integrity: sha512-GtCZrQs6ylPDolaCk/7XORVPQPykwcWTLeF98qx46xmwTBDSgqLLJUoTg9nowS3cK/TdNmFQbrYIKpx9j98lcQ==}
+  '@xmtp/agent-sdk@1.1.14':
+    resolution: {integrity: sha512-vAFaw4edNDi5wnr0w4s3W5Di4P+HUOSqLAx240MArGPQT04NeWD1FHmCSifHWDQPgQfyFV8gid+bI00ou9tTUg==}
     engines: {node: '>=20'}
 
   '@xmtp/content-type-group-updated@2.0.2':
@@ -1794,8 +1794,8 @@ packages:
     resolution: {integrity: sha512-5rYu5uGjGQaW+Q9RT+LPhxRdwOqOqWNzlfNR6+SuammXryTzw5j2uhw7r6Kh4hrsFZs09oZ1ZFGm5KxwtBigGA==}
     engines: {node: '>=18'}
 
-  '@xmtp/node-sdk@4.2.6':
-    resolution: {integrity: sha512-X1F+eKJuS8FwxcbpsNiaJ013R20kD7xZVpSPnhOhFE1Lb+G4w5eigiz2e5zh+PZVTlt1nKdqK3lRSSSBjMsGRg==}
+  '@xmtp/node-sdk@4.3.1':
+    resolution: {integrity: sha512-ZnUFYvTwT8OGq23b84q9PUCgPlj9oNppnYcW1WYIaWpDZlTVcNaDdHe+a+x+tBt7MgA+YU0CrOaXnmSVM3e4Gw==}
     engines: {node: '>=20'}
 
   '@xmtp/proto@3.87.0':
@@ -6593,7 +6593,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@xmtp/agent-sdk@1.1.13(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)':
+  '@xmtp/agent-sdk@1.1.14(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)':
     dependencies:
       '@xmtp/content-type-markdown': 1.0.0
       '@xmtp/content-type-reaction': 2.0.2
@@ -6603,7 +6603,7 @@ snapshots:
       '@xmtp/content-type-text': 2.0.2
       '@xmtp/content-type-transaction-reference': 2.0.2
       '@xmtp/content-type-wallet-send-calls': 2.0.0
-      '@xmtp/node-sdk': 4.2.6
+      '@xmtp/node-sdk': 4.3.1
       viem: 2.38.4(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.12)
     transitivePeerDependencies:
       - bufferutil
@@ -6659,7 +6659,7 @@ snapshots:
 
   '@xmtp/node-bindings@1.6.1-rc3': {}
 
-  '@xmtp/node-sdk@4.2.6':
+  '@xmtp/node-sdk@4.3.1':
     dependencies:
       '@xmtp/content-type-group-updated': 2.0.2
       '@xmtp/content-type-primitives': 2.0.2
