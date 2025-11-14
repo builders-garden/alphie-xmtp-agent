@@ -163,16 +163,16 @@ async function main() {
 		}
 	});
 
-	xmtpAgent.on("unknownMessage", async (ctx) => {
+	xmtpAgent.on("unknownMessage", (ctx) => {
 		console.log("[xmtp] Unknown message received", ctx);
 	});
 
-	xmtpAgent.on("unhandledError", async (ctx) => {
+	xmtpAgent.on("unhandledError", (ctx) => {
 		console.log("[xmtp] Unhandled error received", ctx);
 	});
 
 	// Handle startup
-	xmtpAgent.on("start", async () => {
+	xmtpAgent.on("start", () => {
 		console.log("🦊 Alphie XMTP Agent is running...");
 		logDetails(xmtpAgent.client);
 	});
@@ -187,16 +187,20 @@ async function main() {
 	// Unified graceful shutdown
 	let isShuttingDown = false;
 	const shutdown = async (signal: string) => {
-		if (isShuttingDown) return;
+		if (isShuttingDown) {
+			return;
+		}
 		isShuttingDown = true;
 		console.log(`${signal} received, shutting down...`);
 
-		const tasks: Array<Promise<unknown>> = [];
+		const tasks: Promise<unknown>[] = [];
 
 		// Close HTTP server
 		tasks.push(
 			new Promise<void>((resolve) => {
-				if (!server) return resolve();
+				if (!server) {
+					return resolve();
+				}
 				server.close(() => resolve());
 			})
 		);
@@ -204,13 +208,17 @@ async function main() {
 		// Stop XMTP Agent
 		try {
 			tasks.push(xmtpAgent.stop?.() ?? Promise.resolve());
-		} catch {}
+		} catch {
+			// ignore
+		}
 
 		// Close BullMQ workers
 		try {
 			tasks.push(updateUsersWorker.close());
 			tasks.push(neynarWebhookWorker.close());
-		} catch {}
+		} catch {
+			// ignore
+		}
 
 		// Disconnect Redis
 		tasks.push(
@@ -220,7 +228,9 @@ async function main() {
 				} catch {
 					try {
 						redisConnection.disconnect();
-					} catch {}
+					} catch {
+						// ignore
+					}
 				}
 			})()
 		);
@@ -230,8 +240,8 @@ async function main() {
 		setTimeout(() => process.exit(0), 100).unref();
 	};
 
-	process.on("SIGINT", () => void shutdown("SIGINT"));
-	process.on("SIGTERM", () => void shutdown("SIGTERM"));
+	process.on("SIGINT", () => shutdown("SIGINT"));
+	process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
 main().catch((error) => {
