@@ -51,6 +51,7 @@ export const createXmtpAgent = async () => {
 		env: env.XMTP_ENV,
 		dbEncryptionKey,
 		dbPath: customDbPath,
+		disableDeviceSync: true,
 		codecs: [
 			new ReplyCodec(),
 			new GroupUpdatedCodec(),
