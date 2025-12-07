@@ -1,6 +1,5 @@
 import type { Job } from "bullmq";
 import { ulid } from "ulid";
-import type { Address } from "viem";
 import { getTokenInfoFromCodex } from "../../../lib/codex.js";
 import { saveActivityForMultipleGroups } from "../../../lib/db/queries/group-activity.query.js";
 import {
@@ -17,12 +16,8 @@ import {
 } from "../../../lib/db/queries/user-activity.query.js";
 import { env } from "../../../lib/env.js";
 import { createXmtpAgent } from "../../../lib/xmtp/agent.js";
-import {
-	ContentTypeActions,
-	type JobResult,
-	type NeynarWebhookJobData,
-} from "../../../types/index.js";
-import { getTokenInfo, getXmtpCopyTradeAction } from "../../../utils/index.js";
+import type { JobResult, NeynarWebhookJobData } from "../../../types/index.js";
+import { getTokenInfo } from "../../../utils/index.js";
 import { getTokenPriceAndFdv } from "../../../utils/token.util.js";
 
 /**
@@ -233,12 +228,12 @@ export const processNeynarWebhookJob = async (
 		);
 
 		// build copy trade action
-		const action = await getXmtpCopyTradeAction({
-			actionMessage,
-			transaction,
-			userUsername: userInDb.name,
-			agentAddress: agentAddress as Address,
-		});
+		// const action = await getXmtpCopyTradeAction({
+		// 	actionMessage,
+		// 	transaction,
+		// 	userUsername: userInDb.name,
+		// 	agentAddress: agentAddress as Address,
+		// });
 		progress = 15;
 		await job.updateProgress(progress);
 		console.log(
@@ -266,10 +261,11 @@ export const processNeynarWebhookJob = async (
 			}
 
 			// send copy trade action to the group chat
-			await conversation.send(action, ContentTypeActions);
+			// await conversation.send(action, ContentTypeActions);
 			await conversation.send(
-				`See more details here ${env.APP_URL}/g/${group.groupId}/tx/${transaction.transactionHash}`
+				`${actionMessage}. Details here ${env.APP_URL}/g/${group.groupId}/tx/${transaction.transactionHash}`
 			);
+
 			console.log(
 				`[neynar-webhook-job] job ${job.id} Copy trade action sent to the group chat ${conversation.id}`
 			);
