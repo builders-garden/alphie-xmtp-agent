@@ -18,6 +18,7 @@ import { env } from "../../../lib/env.js";
 import { createXmtpAgent } from "../../../lib/xmtp/agent.js";
 import type { JobResult, NeynarWebhookJobData } from "../../../types/index.js";
 import { getTokenInfo } from "../../../utils/index.js";
+import { generateShortId } from "../../../utils/nanoid.util.js";
 import { getTokenPriceAndFdv } from "../../../utils/token.util.js";
 
 /**
@@ -201,6 +202,7 @@ export const processNeynarWebhookJob = async (
 		// save group activity in db
 		const groupActivities = groups.map((group) => ({
 			id: ulid(),
+			shortId: generateShortId(),
 			groupId: group.groupId,
 			activityChainId: transaction.chainId,
 			activityTxHash: transaction.transactionHash,
@@ -262,12 +264,15 @@ export const processNeynarWebhookJob = async (
 
 			// send copy trade action to the group chat
 			// await conversation.send(action, ContentTypeActions);
+			const groupActivity = groupActivities.find(
+				(ga) => ga.groupId === group.groupId
+			);
 			await conversation.send(
-				`${actionMessage}. Details here ${env.APP_URL}/g/${group.groupId}/tx/${transaction.transactionHash}`
+				`${actionMessage}. Details here ${env.APP_URL}/a/${groupActivity?.shortId}`
 			);
 
 			console.log(
-				`[neynar-webhook-job] job ${job.id} Copy trade action sent to the group chat ${conversation.id}`
+				`[neynar-webhook-job] job ${job.id} Copy trade action sent to the group chat ${conversation.id} for group activity ${groupActivity?.shortId}`
 			);
 
 			completedGroups += 1;

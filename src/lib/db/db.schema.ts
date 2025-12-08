@@ -10,6 +10,7 @@ import {
 import { ulid } from "ulid";
 import type { FarcasterNotificationDetails } from "../../types/farcaster.type.js";
 import type { DurableActionType } from "../../types/xmtp.types.js";
+import { generateShortId } from "../../utils/nanoid.util.js";
 
 /**
  * Better Auth Tables
@@ -266,6 +267,10 @@ export const groupActivity = sqliteTable(
 	"group_activity",
 	{
 		id: text("id").primaryKey().notNull(),
+		shortId: text("short_id")
+			.$defaultFn(() => generateShortId())
+			.unique()
+			.notNull(),
 		groupId: text("group_id")
 			.notNull()
 			.references(() => group.id, { onDelete: "cascade" }),
@@ -279,6 +284,7 @@ export const groupActivity = sqliteTable(
 			foreignColumns: [userActivity.chainId, userActivity.txHash],
 			name: "group_activity_activity_id_fk",
 		}),
+		uniqueIndex("group_activity_short_id_idx").on(t.shortId),
 	]
 );
 

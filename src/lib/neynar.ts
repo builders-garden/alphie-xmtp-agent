@@ -99,7 +99,6 @@ export const getNeynarWebhookById = async (webhookId: string) => {
 	const data = await neynarClient.lookupWebhook({
 		webhookId,
 	});
-	console.log("data", JSON.stringify(data, null, 2));
 	if (
 		!("webhook" in data && data.webhook) ||
 		("success" in data && !data.success)
