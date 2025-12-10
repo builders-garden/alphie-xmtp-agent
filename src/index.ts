@@ -104,6 +104,7 @@ async function main() {
 
 	// Create agent using environment variables
 	const xmtpAgent = await createXmtpAgent();
+	await xmtpAgent.client.revokeAllOtherInstallations();
 
 	// get agent address
 	const agentAddress = xmtpAgent.address;
