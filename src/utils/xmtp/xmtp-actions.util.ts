@@ -39,7 +39,9 @@ export const registerXmtpActions = () => {
 		const senderAddress = await ctx.getSenderAddress();
 		if (!senderAddress) return;
 
-		await ctx.sendText(`💸 explore group stats on the app ${env.APP_URL}`);
+		await ctx.sendText(
+			`💸 explore group stats on the app ${env.APP_URL}/g/${ctx.conversation.id}`
+		);
 	});
 };
 
