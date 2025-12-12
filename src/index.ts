@@ -175,7 +175,7 @@ async function main() {
 	// Handle startup
 	xmtpAgent.on("start", () => {
 		console.log("🦊 Alphie XMTP Agent is running...");
-		logDetails(xmtpAgent.client);
+		logDetails(xmtpAgent);
 	});
 
 	await xmtpAgent.start();
