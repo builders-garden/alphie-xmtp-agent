@@ -104,6 +104,7 @@ export const upsertGroupMembers = async (
 					(a) => a.address.toLowerCase() === m.address?.toLowerCase()
 				)
 		);
+	if (data.length === 0) return;
 	const users = await getOrCreateUsersByInboxIds(data);
 
 	const rows: CreateGroupMember[] = users.map((u) => ({
