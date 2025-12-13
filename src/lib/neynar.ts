@@ -25,12 +25,17 @@ export const fetchBulkUsersFromNeynar = async (
 ): Promise<NeynarUser[]> => {
 	if (!fids) return [];
 
-	const data = await neynarClient.fetchBulkUsers({
-		fids,
-		viewerFid,
-	});
+	try {
+		const data = await neynarClient.fetchBulkUsers({
+			fids,
+			viewerFid,
+		});
 
-	return data.users || [];
+		return data.users || [];
+	} catch (error) {
+		console.error("Error fetching bulk users from Neynar", error);
+		return [];
+	}
 };
 
 /**
@@ -42,9 +47,14 @@ export const fetchUserFromNeynarByFid = async (
 	fid: number
 ): Promise<NeynarUser | null> => {
 	if (!fid) return null;
-	const users = await fetchBulkUsersFromNeynar([fid]);
-	if (!users || users.length === 0) return null;
-	return users[0];
+	try {
+		const users = await fetchBulkUsersFromNeynar([fid]);
+		if (!users || users.length === 0) return null;
+		return users[0];
+	} catch (error) {
+		console.error("Error fetching user from Neynar", error);
+		return null;
+	}
 };
 
 /**
@@ -57,20 +67,25 @@ export const searchUserByUsername = async (
 	username: string,
 	viewerFid?: number
 ): Promise<NeynarUser | null> => {
-	const data = await neynarClient.searchUser({
-		q: username,
-		limit: 1,
-		viewerFid,
-	});
+	try {
+		const data = await neynarClient.searchUser({
+			q: username,
+			limit: 1,
+			viewerFid,
+		});
 
-	if (!data.result?.users) {
+		if (!data.result?.users) {
+			return null;
+		}
+		const users = data.result.users.map((user) => ({
+			...user,
+			pfp_url: user.pfp_url ? formatAvatarSrc(user.pfp_url) : "",
+		}));
+		return users[0];
+	} catch (error) {
+		console.error("Error searching for users by username", error);
 		return null;
 	}
-	const users = data.result.users.map((user) => ({
-		...user,
-		pfp_url: user.pfp_url ? formatAvatarSrc(user.pfp_url) : "",
-	}));
-	return users[0];
 };
 
 /**
@@ -82,12 +97,17 @@ export const fetchUserFromNeynarByAddress = async (
 	address: string,
 	viewerFid?: number
 ): Promise<NeynarUser | undefined> => {
-	const data = await neynarClient.fetchBulkUsersByEthOrSolAddress({
-		addresses: [address],
-		viewerFid,
-	});
-	const userArray = data[address.toLowerCase()];
-	return userArray && userArray.length > 0 ? userArray[0] : undefined;
+	try {
+		const data = await neynarClient.fetchBulkUsersByEthOrSolAddress({
+			addresses: [address],
+			viewerFid,
+		});
+		const userArray = data[address.toLowerCase()];
+		return userArray && userArray.length > 0 ? userArray[0] : undefined;
+	} catch (error) {
+		console.error("Error fetching user from Neynar by address", error);
+		return;
+	}
 };
 
 /**
@@ -96,16 +116,21 @@ export const fetchUserFromNeynarByAddress = async (
  * @returns The webhook
  */
 export const getNeynarWebhookById = async (webhookId: string) => {
-	const data = await neynarClient.lookupWebhook({
-		webhookId,
-	});
-	if (
-		!("webhook" in data && data.webhook) ||
-		("success" in data && !data.success)
-	) {
+	try {
+		const data = await neynarClient.lookupWebhook({
+			webhookId,
+		});
+		if (
+			!("webhook" in data && data.webhook) ||
+			("success" in data && !data.success)
+		) {
+			return null;
+		}
+		return data.webhook as NeynarWebhook;
+	} catch (error) {
+		console.error("Error getting webhook from Neynar", error);
 		return null;
 	}
-	return data.webhook as NeynarWebhook;
 };
 
 /**
@@ -130,28 +155,33 @@ export const createNeynarWebhookTradeCreated = async ({
 	minNeynarScore?: number;
 	minTokenAmountUSDC?: number;
 }) => {
-	const data = await ky
-		.post<NeynarWebhookResponse>(
-			"https://api.neynar.com/v2/farcaster/webhook",
-			{
-				headers: {
-					"x-api-key": env.NEYNAR_API_KEY,
-				},
-				json: {
-					name: `Alphie webhook #${webhookNumber}`,
-					url: webhookUrl,
-					subscription: {
-						"trade.created": {
-							fids,
-							minimum_trader_neynar_score: minNeynarScore,
-							minimum_token_amount_usdc: minTokenAmountUSDC,
+	try {
+		const data = await ky
+			.post<NeynarWebhookResponse>(
+				"https://api.neynar.com/v2/farcaster/webhook",
+				{
+					headers: {
+						"x-api-key": env.NEYNAR_API_KEY,
+					},
+					json: {
+						name: `Alphie webhook #${webhookNumber}`,
+						url: webhookUrl,
+						subscription: {
+							"trade.created": {
+								fids,
+								minimum_trader_neynar_score: minNeynarScore,
+								minimum_token_amount_usdc: minTokenAmountUSDC,
+							},
 						},
 					},
-				},
-			}
-		)
-		.json();
-	return data;
+				}
+			)
+			.json();
+		return data;
+	} catch (error) {
+		console.error("Error creating webhook in Neynar", error);
+		return null;
+	}
 };
 
 /**
@@ -177,43 +207,51 @@ export const updateNeynarWebhookTradeCreated = async ({
 	minNeynarScore?: number;
 	minTokenAmountUSDC?: number;
 }) => {
-	const minimum_trader_neynar_score =
-		minNeynarScore && minNeynarScore >= 0 && minNeynarScore <= 1
-			? minNeynarScore
-			: undefined;
-	const response = await fetch("https://api.neynar.com/v2/farcaster/webhook", {
-		method: "PUT",
-		headers: {
-			"x-api-key": env.NEYNAR_API_KEY,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			webhook_id: webhookId,
-			name: webhookName,
-			url: webhookUrl,
-			subscription: {
-				"trade.created": {
-					fids,
-					minimum_trader_neynar_score,
-					minimum_token_amount_usdc: minTokenAmountUSDC,
+	try {
+		const minimum_trader_neynar_score =
+			minNeynarScore && minNeynarScore >= 0 && minNeynarScore <= 1
+				? minNeynarScore
+				: undefined;
+		const response = await fetch(
+			"https://api.neynar.com/v2/farcaster/webhook",
+			{
+				method: "PUT",
+				headers: {
+					"x-api-key": env.NEYNAR_API_KEY,
+					"Content-Type": "application/json",
 				},
-			},
-		}),
-	});
+				body: JSON.stringify({
+					webhook_id: webhookId,
+					name: webhookName,
+					url: webhookUrl,
+					subscription: {
+						"trade.created": {
+							fids,
+							minimum_trader_neynar_score,
+							minimum_token_amount_usdc: minTokenAmountUSDC,
+						},
+					},
+				}),
+			}
+		);
 
-	if (!response.ok) {
-		const error = await response.json();
-		console.error("Failed to update webhook", JSON.stringify(error, null, 2));
-		throw new Error(`Failed to update webhook: ${response.statusText}`);
+		if (!response.ok) {
+			const error = await response.json();
+			console.error("Failed to update webhook", JSON.stringify(error, null, 2));
+			throw new Error(`Failed to update webhook: ${response.statusText}`);
+		}
+		const data = (await response.json()) as NeynarWebhookResponse;
+		if (
+			!("webhook" in data && data.webhook) ||
+			("success" in data && !data.success)
+		) {
+			console.error("Failed to update webhook", JSON.stringify(data, null, 2));
+		}
+		return data;
+	} catch (error) {
+		console.error("Error updating webhook in Neynar", error);
+		return null;
 	}
-	const data = (await response.json()) as NeynarWebhookResponse;
-	if (
-		!("webhook" in data && data.webhook) ||
-		("success" in data && !data.success)
-	) {
-		console.error("Failed to update webhook", JSON.stringify(data, null, 2));
-	}
-	return data;
 };
 
 /**
@@ -226,8 +264,13 @@ export const deleteNeynarWebhook = async ({
 }: {
 	webhookId: string;
 }) => {
-	const data = await neynarClient.deleteWebhook({
-		webhookId,
-	});
-	return data;
+	try {
+		const data = await neynarClient.deleteWebhook({
+			webhookId,
+		});
+		return data;
+	} catch (error) {
+		console.error("Error deleting webhook from Neynar", error);
+		return null;
+	}
 };
