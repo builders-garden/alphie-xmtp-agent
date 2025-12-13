@@ -57,13 +57,12 @@ export const createUser = async (input: CreateUser) => {
  * @param address - The address of the user
  * @param neynarUser - The user
  * @returns
- * @throws Error if unable to resolve Farcaster FID for user creation. Address or Neynar user with fid is required.
  */
 const createUserFromAddress = async (
 	inboxId?: string,
 	address?: string,
 	neynarUser?: NeynarUser
-): Promise<User & { farcaster?: Farcaster }> => {
+): Promise<(User & { farcaster?: Farcaster }) | null> => {
 	let farcasterFid: number | undefined = neynarUser?.fid;
 	let farcasterAvatarUrl: string | null = neynarUser?.pfp_url
 		? formatAvatarSrc(neynarUser?.pfp_url)
@@ -90,9 +89,7 @@ const createUserFromAddress = async (
 	}
 
 	if (!farcasterFid) {
-		throw new Error(
-			"Unable to resolve Farcaster FID for user creation. Address or Neynar user with fid is required."
-		);
+		return null;
 	}
 
 	// If farcaster user already exists, link and update missing fields
@@ -186,6 +183,9 @@ export const getOrCreateUserByInboxId = async (
 			return existing;
 		}
 		const newUser = await createUserFromAddress(inboxId, address);
+		if (!newUser) {
+			return null;
+		}
 		return newUser;
 	} catch (err) {
 		console.error("an error occured creating the user", err);

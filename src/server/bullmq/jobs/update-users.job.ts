@@ -181,7 +181,7 @@ export const processUpdateUsersJob = async (
 			webhookName: webhook.webhookName,
 			fids: mergedFids,
 		});
-		if ("webhook" in updatedWebhook) {
+		if (updatedWebhook && "webhook" in updatedWebhook) {
 			await updateNeynarWebhookInDb(updatedWebhook);
 			console.log(
 				`[update-users-job] Webhook updated successfully in db ${updatedWebhook.webhook.webhook_id}`
