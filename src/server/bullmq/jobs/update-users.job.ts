@@ -265,7 +265,7 @@ const computeAddCountsByFid = (
 	const counts = new Map<number, number>();
 	for (const row of trackingAddsResolved) {
 		const fid = addUserIdToFid.get(row.userId);
-		if (fid == null) {
+		if (!fid) {
 			continue;
 		}
 		const key = `${fid}:${row.groupId}`;
@@ -293,7 +293,7 @@ const computeRemoveCountsByFid = (
 	for (const [groupId, userIds] of removalsByResolvedGroup.entries()) {
 		for (const userId of userIds) {
 			const fid = removeUserIdToFid.get(userId);
-			if (fid == null) {
+			if (!fid) {
 				continue;
 			}
 			const key = `${fid}:${groupId}`;
