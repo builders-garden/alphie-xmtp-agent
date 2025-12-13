@@ -35,7 +35,7 @@
     "@coinbase/onchainkit": "^1.1.0",
     "@farcaster/miniapp-sdk": "^0.2.1",
     "@libsql/client": "^0.15.15",
-    "@neynar/nodejs-sdk": "^3.101.0",
+    "@neynar/nodejs-sdk": "^3.110.0",
     "@t3-oss/env-core": "^0.13.8",
     "@xmtp/agent-sdk": "^1.2.1",
     "@xmtp/content-type-group-updated": "^2.0.3",
